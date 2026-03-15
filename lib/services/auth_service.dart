@@ -66,18 +66,20 @@ class AuthService {
           identifier: normalizedIdentifier,
           isAdmin: true,
         );
-      } catch (_) {
-        // Lanjutkan fallback ke users collection jika bukan akun admin Firebase.
+      } on FirebaseAuthException catch (_) {
+        // Lanjutkan fallback ke users collection jika bukan akun admin Firebase
+        // atau jika terjadi error autentikasi email/password.
       }
     }
 
     final userDoc = await _findUserByIdentifier(normalizedIdentifier);
 
-    if (userDoc == null) {
+    // Pastikan userDoc dan datanya tidak null sebelum diakses
+    if (userDoc == null || userDoc.data() == null) {
       throw Exception('User tidak ditemukan');
     }
 
-    final data = userDoc.data();
+    final data = userDoc.data()!; // Gunakan ! karena sudah dipastikan tidak null
 
     if (data['password'] != hashPassword(password)) {
       throw Exception('Password salah');
@@ -99,8 +101,7 @@ class AuthService {
   }
 
   Future<DocumentSnapshot<Map<String, dynamic>>?> _findUserByIdentifier(
-    String identifier,
-  ) async {
+      String identifier,) async {
     final fields = ['identifier', 'hp', 'rumah', 'email'];
 
     for (final field in fields) {
@@ -141,11 +142,13 @@ class AuthService {
     }
 
     final userDoc = await _findUserByIdentifier(identifier);
-    if (userDoc == null) {
+
+    // Pastikan userDoc dan datanya tidak null sebelum diakses
+    if (userDoc == null || userDoc.data() == null) {
       throw Exception('Akun user tidak ditemukan');
     }
 
-    final userData = userDoc.data();
+    final userData = userDoc.data()!; // Gunakan ! karena sudah dipastikan tidak null
     if (userData['password'] != hashPassword(currentPassword)) {
       throw Exception('Password saat ini salah');
     }
