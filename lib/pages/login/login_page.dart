@@ -26,17 +26,21 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final role = await AuthService().loginFlexible(
+      final loginResult = await AuthService().loginFlexible(
         identifierController.text.trim(),
         passwordController.text.trim(),
       );
-      await SessionService.saveLogin(role);
+      await SessionService.saveLogin(
+        role: loginResult.role,
+        identifier: loginResult.identifier,
+        isAdmin: loginResult.isAdmin,
+      );
       if (!mounted) return;
 
       Navigator.pushReplacementNamed(
         context,
         AppRoutes.dashboard,
-        arguments: role,
+        arguments: loginResult.role,
       );
     } catch (e) {
       if (!mounted) return;
