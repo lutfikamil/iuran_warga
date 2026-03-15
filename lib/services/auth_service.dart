@@ -78,9 +78,6 @@ class AuthService {
     }
 
     final data = userDoc.data();
-    if (data == null) {
-      throw Exception('Data user tidak valid');
-    }
 
     if (data['password'] != hashPassword(password)) {
       throw Exception('Password salah');
@@ -149,10 +146,6 @@ class AuthService {
     }
 
     final userData = userDoc.data();
-    if (userData == null) {
-      throw Exception('Data akun user tidak valid');
-    }
-
     if (userData['password'] != hashPassword(currentPassword)) {
       throw Exception('Password saat ini salah');
     }
