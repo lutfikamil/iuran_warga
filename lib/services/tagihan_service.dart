@@ -101,6 +101,7 @@ class TagihanService {
         transaction.set(transaksiRef, {
           "tanggal": Timestamp.now(),
           "jenis": "masuk",
+          "sumberPemasukan": "iuran",
           "jumlah": data["jumlah"],
           "dari": dariKeterangan,
           "penerima": "Bendahara", // Atau ambil dari session user yang login
