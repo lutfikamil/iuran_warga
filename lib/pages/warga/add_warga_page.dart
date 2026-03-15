@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../services/log_service.dart';
 
 class AddWargaPage extends StatefulWidget {
   final String? wargaId;
@@ -80,6 +81,11 @@ class _AddWargaPageState extends State<AddWargaPage> {
               .collection("warga")
               .doc(widget.wargaId)
               .update(wargaData);
+          await LogService().logEvent(
+            action: 'update_warga',
+            target: 'warga',
+            detail: 'Update data warga ${_namaController.text} (id=${widget.wargaId})',
+          );
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Warga berhasil diperbarui!')),
@@ -87,7 +93,14 @@ class _AddWargaPageState extends State<AddWargaPage> {
           }
         } else {
           wargaData["createdAt"] = Timestamp.now(); // Hanya saat membuat baru
-          await FirebaseFirestore.instance.collection("warga").add(wargaData);
+          final ref = await FirebaseFirestore.instance
+              .collection("warga")
+              .add(wargaData);
+          await LogService().logEvent(
+            action: 'tambah_warga',
+            target: 'warga',
+            detail: 'Tambah warga ${_namaController.text} (id=${ref.id})',
+          );
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Warga berhasil ditambahkan!')),

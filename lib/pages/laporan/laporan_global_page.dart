@@ -10,8 +10,8 @@ class LaporanGlobalPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text("Laporan Global")),
 
-      body: StreamBuilder(
-        stream: FirebaseFirestore.instance.collection("pembayaran").snapshots(),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection("transaksi").snapshots(),
 
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
@@ -20,10 +20,18 @@ class LaporanGlobalPage extends StatelessWidget {
 
           var docs = snapshot.data!.docs;
 
-          int total = 0;
+          num total = 0;
 
           for (var d in docs) {
-            total += (d["jumlah"] ?? 0) as int;
+            final data = d.data() as Map<String, dynamic>;
+            final amount = (data["jumlah"] as num?) ?? 0;
+            final jenis = data["jenis"] as String?;
+
+            if (jenis == 'keluar') {
+              total -= amount;
+            } else {
+              total += amount;
+            }
           }
 
           return Padding(
@@ -40,7 +48,7 @@ class LaporanGlobalPage extends StatelessWidget {
 
                 AppCard(
                   title: "Total Kas",
-                  value: "Rp $total",
+                  value: "Rp ${total.toInt()}",
                   icon: Icons.account_balance_wallet,
                 ),
               ],

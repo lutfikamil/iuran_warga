@@ -11,6 +11,7 @@ import '../pages/pengeluaran/add_pengeluaran_page.dart';
 import '../pages/pemasukan/pemasukan_page.dart';
 import '../pages/pemasukan/add_pemasukan_page.dart';
 import '../pages/settings/settings_page.dart';
+import '../pages/profile/profile_page.dart';
 
 class AppRoutes {
   static const login = "/";
@@ -25,6 +26,7 @@ class AppRoutes {
   static const laporanGlobal = "/laporan_global";
   static const daftarIuran = "/daftar_iuran";
   static const settings = "/settings";
+  static const profile = "/profile";
 
   static Map<String, WidgetBuilder> routes = {
     login: (_) => const LoginPage(),
@@ -39,5 +41,6 @@ class AppRoutes {
     laporanGlobal: (_) => const LaporanGlobalPage(),
     daftarIuran: (_) => const DaftarIuranPage(),
     settings: (_) => const SettingPage(),
+    profile: (_) => const ProfilePage(),
   };
 }

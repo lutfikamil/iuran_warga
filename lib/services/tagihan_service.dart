@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'settings_service.dart';
+import 'log_service.dart';
 
 final Logger _logger = Logger(
   printer: PrettyPrinter(
@@ -102,6 +103,8 @@ class TagihanService {
           "tanggal": Timestamp.now(),
           "jenis": "masuk",
           "sumberPemasukan": "iuran",
+          "wargaId": data["wargaId"],
+          "bulanTagihan": data["bulan"],
           "jumlah": data["jumlah"],
           "dari": dariKeterangan,
           "penerima": "Bendahara", // Atau ambil dari session user yang login
@@ -121,6 +124,11 @@ class TagihanService {
         });
       });
       _log('Pembayaran tagihan ID: $tagihanId berhasil.');
+      await LogService().logEvent(
+        action: 'pembayaran_iuran',
+        target: 'tagihan',
+        detail: 'Pembayaran berhasil untuk tagihanId=$tagihanId',
+      );
     } catch (e, st) {
       _log(
         'Gagal memproses pembayaran untuk tagihan ID: $tagihanId: $e',

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
+import 'log_service.dart';
 
 // Inisialisasi Logger
 final Logger _logger = Logger(
@@ -52,6 +53,11 @@ class PengeluaranService {
         "updatedAt": Timestamp.now(),
       });
       _log('Pengeluaran berhasil ditambahkan.');
+      await LogService().logEvent(
+        action: 'tambah_pengeluaran',
+        target: 'transaksi',
+        detail: 'Tambah pengeluaran sebesar Rp ${jumlah.toStringAsFixed(0)} untuk $penerima',
+      );
     } catch (e, st) {
       _log('Gagal menambahkan pengeluaran: $e', error: e, stackTrace: st);
       rethrow;
@@ -79,6 +85,11 @@ class PengeluaranService {
         // jenis dan statusBendahara tidak diubah di sini
       });
       _log('Pengeluaran ID: $id berhasil diperbarui.');
+      await LogService().logEvent(
+        action: 'update_pengeluaran',
+        target: 'transaksi',
+        detail: 'Update pengeluaran id=$id menjadi Rp ${jumlah.toStringAsFixed(0)}',
+      );
     } catch (e, st) {
       _log(
         'Gagal memperbarui pengeluaran ID: $id: $e',
@@ -95,6 +106,11 @@ class PengeluaranService {
     try {
       await _firestore.collection("transaksi").doc(id).delete();
       _log('Pengeluaran ID: $id berhasil dihapus.');
+      await LogService().logEvent(
+        action: 'hapus_pengeluaran',
+        target: 'transaksi',
+        detail: 'Hapus pengeluaran id=$id',
+      );
     } catch (e, st) {
       _log('Gagal menghapus pengeluaran ID: $id: $e', error: e, stackTrace: st);
       rethrow;

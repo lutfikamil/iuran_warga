@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/settings_service.dart';
+import '../../services/log_service.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -47,6 +48,11 @@ class _SettingPageState extends State<SettingPage> {
     });
 
     await _settingsService.updateIuranAmount(value);
+    await LogService().logEvent(
+      action: 'update_setting_iuran',
+      target: 'settings/tagihan',
+      detail: 'Ubah nominal iuran menjadi Rp ${value.toStringAsFixed(0)}',
+    );
 
     setState(() {
       _saving = false;
