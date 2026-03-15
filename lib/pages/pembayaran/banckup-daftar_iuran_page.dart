@@ -9,7 +9,6 @@ class DaftarIuranPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text("Daftar Iuran Warga")),
       body: Column(
-        // Menggunakan Column karena StatusPembayaranTable sekarang mengelola padding dan search bar-nya sendiri
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Judul "Status Pembayaran" sekarang bisa opsional, atau diatur di sini

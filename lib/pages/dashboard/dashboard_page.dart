@@ -189,20 +189,18 @@ class DashboardPage extends StatelessWidget {
                       AppRoutes.laporanGlobal,
                     ),
 
-                    menuCard(
-                      context,
-                      "Daftar Iuran Warga",
-                      Icons.money,
-                      AppRoutes.daftarIuran,
-                    ),
-
+                    //menuCard(
+                    //  context,
+                    //  "Daftar Iuran Warga",
+                    //  Icons.money,
+                    //  AppRoutes.daftarIuran,
+                    //),
                     menuCard(
                       context,
                       "Pengaturan",
                       Icons.money,
                       AppRoutes.settings,
                     ),
-
 
                     menuCard(
                       context,

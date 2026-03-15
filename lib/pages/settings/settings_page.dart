@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import '../../services/settings_service.dart';
 import '../../services/log_service.dart';
 
-class SettingPage extends StatefulWidget {
-  const SettingPage({super.key});
+class SettingsPage extends StatefulWidget {
+  const SettingsPage({super.key});
 
   @override
-  State<SettingPage> createState() => _SettingPageState();
+  State<SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingPageState extends State<SettingPage> {
+class _SettingsPageState extends State<SettingsPage> {
   final SettingsService _settingsService = SettingsService();
 
   final TextEditingController _iuranController = TextEditingController();

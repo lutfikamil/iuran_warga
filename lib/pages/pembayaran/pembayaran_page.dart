@@ -74,6 +74,9 @@ class _PembayaranPageState extends State<PembayaranPage> {
     String tagihanId,
   ) {
     final status = tagihanData["status"];
+    final namaWarga = wargaData["nama"] ?? '-';
+    final bulanTagihan = tagihanData["bulan"] ?? '-';
+    final jumlahTagihan = tagihanData["jumlah"] ?? '0';
 
     return TableRow(
       decoration: BoxDecoration(
@@ -85,18 +88,9 @@ class _PembayaranPageState extends State<PembayaranPage> {
           padding: _defaultPadding,
           child: Text(wargaData["rumah"] ?? '-'),
         ),
-        Padding(
-          padding: _defaultPadding,
-          child: Text(wargaData["nama"] ?? '-'),
-        ),
-        Padding(
-          padding: _defaultPadding,
-          child: Text(tagihanData["bulan"] ?? '-'),
-        ),
-        Padding(
-          padding: _defaultPadding,
-          child: Text("Rp ${tagihanData["jumlah"] ?? '0'}"),
-        ),
+        Padding(padding: _defaultPadding, child: Text(namaWarga)),
+        Padding(padding: _defaultPadding, child: Text(bulanTagihan)),
+        Padding(padding: _defaultPadding, child: Text("Rp $jumlahTagihan")),
         Padding(
           padding: _defaultPadding,
           child: status == "lunas"
@@ -108,15 +102,44 @@ class _PembayaranPageState extends State<PembayaranPage> {
           child: status == "belum"
               ? ElevatedButton(
                   onPressed: () async {
-                    try {
-                      await TagihanService().bayar(tagihanId);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Pembayaran berhasil!')),
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Gagal membayar: $e')),
-                      );
+                    // Tampilkan dialog konfirmasi
+                    final bool? confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (BuildContext dialogContext) {
+                        return AlertDialog(
+                          title: const Text('Konfirmasi Pembayaran'),
+                          content: Text(
+                            'Anda yakin ingin menandai tagihan bulan "$bulanTagihan" untuk "$namaWarga" sebesar Rp $jumlahTagihan sebagai lunas?',
+                          ),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(false),
+                              child: const Text('Batal'),
+                            ),
+                            FilledButton(
+                              // Menggunakan FilledButton untuk aksi positif
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(true),
+                              child: const Text('Ya, Bayar'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+
+                    // Jika user menekan 'Ya, Bayar'
+                    if (confirm == true) {
+                      try {
+                        await TagihanService().bayar(tagihanId);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Pembayaran berhasil!')),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Gagal membayar: $e')),
+                        );
+                      }
                     }
                   },
                   child: const Text("Bayar"),

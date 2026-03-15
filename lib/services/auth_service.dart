@@ -3,9 +3,31 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
 
+enum UserRole {
+  admin,
+  ketua,
+  bendahara,
+  sekertaris,
+  petugas,
+  warga,
+  unauthenticated,
+}
+
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  // Singleton pattern
+  static final AuthService _instance = AuthService._internal();
+  factory AuthService() {
+    return _instance;
+  }
+  AuthService._internal();
+  UserRole _currentUserRole = UserRole.unauthenticated; // Default
+  UserRole get currentUserRole => _currentUserRole;
+
+  void setCurrentUserRole(UserRole role) {
+    _currentUserRole = role;
+  }
 
   String hashPassword(String password) {
     return sha256.convert(utf8.encode(password)).toString();
@@ -19,9 +41,11 @@ class AuthService {
           email: identifier,
           password: password,
         );
-
+        setCurrentUserRole(UserRole.admin);
         return "admin";
-      } catch (e) {}
+      } catch (e) {
+        throw Exception("Login gagal: $e");
+      }
     }
 
     // login warga
@@ -38,9 +62,19 @@ class AuthService {
     final data = result.docs.first.data();
 
     if (data["password"] == hashPassword(password)) {
+      // Konversi string peran dari database ke enum
+      UserRole role = UserRole.values.firstWhere(
+        (e) => e.toString() == 'UserRole.${data["role"]}',
+        orElse: () => UserRole.unauthenticated,
+      );
+      setCurrentUserRole(role); // Set peran setelah login
       return data["role"];
     }
-
     throw Exception("Password salah");
+  }
+
+  bool hasAnyRole(List<UserRole> allowedRoles) {
+    if (allowedRoles.isEmpty) return true;
+    return allowedRoles.contains(_currentUserRole);
   }
 }

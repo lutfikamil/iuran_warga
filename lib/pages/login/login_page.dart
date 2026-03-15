@@ -11,8 +11,12 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController identifierController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController identifierController = TextEditingController(
+    text: 'admin@mulialand.com',
+  );
+  final TextEditingController passwordController = TextEditingController(
+    text: '123456',
+  );
 
   bool loading = false;
 
