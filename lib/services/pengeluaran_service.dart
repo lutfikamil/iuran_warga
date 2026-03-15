@@ -1,5 +1,3 @@
-// File: lib/services/pengeluaran_service.dart (Buat file baru)
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';

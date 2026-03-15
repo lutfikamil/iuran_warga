@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import '../../services/pengeluaran_service.dart';
+//import '../../services/pengeluaran_service.dart';
 import 'add_pengeluaran_page.dart';
 
 class PengeluaranPage extends StatefulWidget {
@@ -28,44 +28,44 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
   }
 
   // --- Konfirmasi Hapus ---
-  Future<void> _confirmDelete(BuildContext context, String id) async {
-    final bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hapus Pengeluaran'),
-        content: const Text(
-          'Apakah Anda yakin ingin menghapus pengeluaran ini?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      try {
-        await PengeluaranService().deletePengeluaran(id);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Pengeluaran berhasil dihapus!')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal menghapus pengeluaran: $e')),
-          );
-        }
-      }
-    }
-  }
+  //  Future<void> _confirmDelete(BuildContext context, String id) async {
+  //    final bool? confirm = await showDialog<bool>(
+  //      context: context,
+  //      builder: (context) => AlertDialog(
+  //        title: const Text('Hapus Pengeluaran'),
+  //        content: const Text(
+  //          'Apakah Anda yakin ingin menghapus pengeluaran ini?',
+  //        ),
+  //        actions: [
+  //          TextButton(
+  //            onPressed: () => Navigator.of(context).pop(false),
+  //            child: const Text('Batal'),
+  //          ),
+  //          TextButton(
+  //            onPressed: () => Navigator.of(context).pop(true),
+  //            child: const Text('Hapus'),
+  //          ),
+  //        ],
+  //      ),
+  //    );
+  //
+  //    if (confirm == true) {
+  //      try {
+  //        await PengeluaranService().deletePengeluaran(id);
+  //        if (mounted) {
+  //          ScaffoldMessenger.of(context).showSnackBar(
+  //            const SnackBar(content: Text('Pengeluaran berhasil dihapus!')),
+  //          );
+  //        }
+  //      } catch (e) {
+  //        if (mounted) {
+  //          ScaffoldMessenger.of(context).showSnackBar(
+  //            SnackBar(content: Text('Gagal menghapus pengeluaran: $e')),
+  //          );
+  //        }
+  //      }
+  //    }
+  //  }
 
   // --- Fungsi untuk mengformat Rupiah ---
   String formatRupiah(num number) {
@@ -85,13 +85,13 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
   static const double _colWidthDari = 120.0;
   static const double _colWidthPenerima = 120.0;
   static const double _colWidthKeterangan = 200.0;
-  static const double _colWidthAksi = 100.0;
+  //static const double _colWidthAksi = 100.0;
 
   /// HEADER ROW TABLE
   TableRow _buildHeaderRow() {
     return TableRow(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
       ),
       children: [
         _buildHeaderCell("No", textAlign: TextAlign.center),
@@ -100,7 +100,7 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
         _buildHeaderCell("Dari", textAlign: TextAlign.left),
         _buildHeaderCell("Penerima", textAlign: TextAlign.left),
         _buildHeaderCell("Keterangan", textAlign: TextAlign.left),
-        _buildHeaderCell("Aksi", textAlign: TextAlign.center),
+        //  _buildHeaderCell("Aksi", textAlign: TextAlign.center),
       ],
     );
   }
@@ -125,7 +125,7 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
   /// DATA ROW TABLE
   TableRow _buildDataRow(int index, DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    final String pengeluaranId = doc.id;
+    //  final String pengeluaranId = doc.id;
 
     final DateTime? tanggal = (data['tanggal'] as Timestamp?)?.toDate();
     final String tanggalFormatted = tanggal != null
@@ -167,30 +167,30 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
           padding: _tableCellPadding,
           child: Text(keterangan, textAlign: TextAlign.left),
         ),
-        Padding(
-          padding: _tableCellPadding,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.edit, size: 20),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          AddPengeluaranPage(pengeluaranId: pengeluaranId),
-                    ),
-                  );
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-                onPressed: () => _confirmDelete(context, pengeluaranId),
-              ),
-            ],
-          ),
-        ),
+        //        Padding(
+        //          padding: _tableCellPadding,
+        //          child: Row(
+        //            mainAxisAlignment: MainAxisAlignment.center,
+        //            children: [
+        //      IconButton(
+        //        icon: const Icon(Icons.edit, size: 20),
+        //        onPressed: () {
+        //          Navigator.push(
+        //            context,
+        //            MaterialPageRoute(
+        //              builder: (context) =>
+        //                  AddPengeluaranPage(pengeluaranId: pengeluaranId),
+        //            ),
+        //          );
+        //        },
+        //      ),
+        //  IconButton(
+        //    icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+        //    onPressed: () => _confirmDelete(context, pengeluaranId),
+        //  ),
+        //            ],
+        //          ),
+        //        ),
       ],
     );
   }
@@ -242,14 +242,8 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection("transaksi")
-            .where(
-              'jenis',
-              isEqualTo: 'keluar',
-            ) // Hanya tampilkan transaksi jenis 'keluar'
-            .orderBy(
-              'tanggal',
-              descending: true,
-            ) // Urutkan berdasarkan tanggal terbaru
+            .where('jenis', isEqualTo: 'keluar')
+            .orderBy('tanggal', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -318,7 +312,7 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                               3: FixedColumnWidth(_colWidthDari),
                               4: FixedColumnWidth(_colWidthPenerima),
                               5: FixedColumnWidth(_colWidthKeterangan),
-                              6: FixedColumnWidth(_colWidthAksi),
+                              // 6: FixedColumnWidth(_colWidthAksi),
                             },
                             children: [
                               _buildHeaderRow(),
