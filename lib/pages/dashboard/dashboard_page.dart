@@ -21,12 +21,12 @@ class DashboardPage extends StatelessWidget {
       child: Card(
         elevation: 5,
         child: SizedBox(
-          width: 200,
-          height: 120,
+          width: 150,
+          height: 100,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 40),
+              Icon(icon, size: 32),
               const SizedBox(height: 10),
               Text(title),
             ],
