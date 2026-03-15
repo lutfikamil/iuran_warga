@@ -21,8 +21,8 @@ class DashboardPage extends StatelessWidget {
       child: Card(
         elevation: 5,
         child: SizedBox(
-          width: 150,
-          height: 100,
+          width: 130,
+          height: 90,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -116,8 +116,8 @@ class DashboardPage extends StatelessWidget {
               children: [
                 /// STATISTIK
                 Wrap(
-                  spacing: 20,
-                  runSpacing: 20,
+                  spacing: 18,
+                  runSpacing: 18,
                   children: [
                     DashboardStat(
                       title: "Total Warga",
@@ -144,8 +144,8 @@ class DashboardPage extends StatelessWidget {
                 const SizedBox(height: 10),
 
                 Wrap(
-                  spacing: 20,
-                  runSpacing: 20,
+                  spacing: 18,
+                  runSpacing: 18,
                   children: [
                     menuCard(
                       context,
