@@ -70,8 +70,11 @@ class DetailWargaPage extends StatelessWidget {
         .doc(wargaId);
 
     final iuranRef = FirebaseFirestore.instance
-        .collection("iuran")
-        .where("wargaId", isEqualTo: wargaId);
+        .collection("transaksi")
+        .where("jenis", isEqualTo: "masuk")
+        .where("sumberPemasukan", isEqualTo: "iuran")
+        .where("wargaId", isEqualTo: wargaId)
+        .orderBy("tanggal", descending: true);
 
     return Scaffold(
       appBar: AppBar(title: const Text("Detail Warga")),
@@ -232,11 +235,14 @@ class DetailWargaPage extends StatelessWidget {
 
                               Timestamp? ts = data["tanggal"];
                               DateTime? tanggal = ts?.toDate();
+                              final bulanTagihan = data["bulanTagihan"] ?? "-";
 
                               return ListTile(
                                 leading: const Icon(Icons.payments),
                                 title: Text(formatRupiah(jumlah)),
-                                subtitle: Text("${tanggal ?? ""} | $ket"),
+                                subtitle: Text(
+                                  "${tanggal ?? ""} | Bulan: $bulanTagihan | $ket",
+                                ),
                               );
                             }),
                           ],

@@ -102,6 +102,8 @@ class TagihanService {
           "tanggal": Timestamp.now(),
           "jenis": "masuk",
           "sumberPemasukan": "iuran",
+          "wargaId": data["wargaId"],
+          "bulanTagihan": data["bulan"],
           "jumlah": data["jumlah"],
           "dari": dariKeterangan,
           "penerima": "Bendahara", // Atau ambil dari session user yang login
