@@ -35,4 +35,3 @@ jobs:
           firebaseServiceAccount: ${{ secrets.SECRET_AUTH }}
           projectId: mulialand
           channelId: live
-        run: dart test
