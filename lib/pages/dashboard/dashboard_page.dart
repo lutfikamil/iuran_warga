@@ -163,8 +163,15 @@ class DashboardPage extends StatelessWidget {
 
                     menuCard(
                       context,
+                      "Pemasukan Umum",
+                      Icons.trending_up,
+                      AppRoutes.pemasukan,
+                    ),
+
+                    menuCard(
+                      context,
                       "Pengeluaran",
-                      Icons.bar_chart,
+                      Icons.trending_down,
                       AppRoutes.pengeluaran,
                     ),
 

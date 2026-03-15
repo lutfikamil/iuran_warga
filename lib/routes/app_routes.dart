@@ -8,6 +8,8 @@ import '../pages/laporan/laporan_global_page.dart';
 import '../pages/pembayaran/daftar_iuran_page.dart';
 import '../pages/pengeluaran/pengeluaran_page.dart';
 import '../pages/pengeluaran/add_pengeluaran_page.dart';
+import '../pages/pemasukan/pemasukan_page.dart';
+import '../pages/pemasukan/add_pemasukan_page.dart';
 import '../pages/settings/settings_page.dart';
 
 class AppRoutes {
@@ -17,6 +19,8 @@ class AppRoutes {
   static const pembayaran = "/pembayaran";
   static const pengeluaran = "/pengeluaran";
   static const addPengeluaran = "/add_pengeluaran";
+  static const pemasukan = "/pemasukan";
+  static const addPemasukan = "/add_pemasukan";
   static const laporan = "/laporan";
   static const laporanGlobal = "/laporan_global";
   static const daftarIuran = "/daftar_iuran";
@@ -29,6 +33,8 @@ class AppRoutes {
     pembayaran: (_) => const PembayaranPage(),
     pengeluaran: (_) => const PengeluaranPage(),
     addPengeluaran: (_) => const AddPengeluaranPage(),
+    pemasukan: (_) => const PemasukanPage(),
+    addPemasukan: (_) => const AddPemasukanPage(),
     laporan: (_) => const LaporanPage(),
     laporanGlobal: (_) => const LaporanGlobalPage(),
     daftarIuran: (_) => const DaftarIuranPage(),
