@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../../services/log_service.dart';
 
 class LaporanPage extends StatefulWidget {
   const LaporanPage({super.key});
@@ -96,6 +97,11 @@ class _LaporanPageState extends State<LaporanPage> {
           });
         }
         await batch.commit();
+        await LogService().logEvent(
+          action: 'approve_transaksi',
+          target: 'transaksi',
+          detail: 'Menyetujui ${_selectedTransactionIds.length} transaksi',
+        );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

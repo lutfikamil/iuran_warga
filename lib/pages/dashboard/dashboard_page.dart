@@ -202,6 +202,14 @@ class DashboardPage extends StatelessWidget {
                       Icons.money,
                       AppRoutes.settings,
                     ),
+
+
+                    menuCard(
+                      context,
+                      "Profile",
+                      Icons.person,
+                      AppRoutes.profile,
+                    ),
                   ],
                 ),
               ],

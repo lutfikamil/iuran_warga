@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'add_warga_page.dart';
+import '../../services/log_service.dart';
 
 class DetailWargaPage extends StatelessWidget {
   final String wargaId;
@@ -32,6 +33,12 @@ class DetailWargaPage extends StatelessWidget {
           .collection("warga")
           .doc(wargaId)
           .delete();
+
+      await LogService().logEvent(
+        action: 'hapus_warga',
+        target: 'warga',
+        detail: 'Hapus data warga id=$wargaId',
+      );
 
       Navigator.pop(context);
 
@@ -81,11 +88,20 @@ class DetailWargaPage extends StatelessWidget {
       body: FutureBuilder<DocumentSnapshot>(
         future: wargaRef.get(),
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Gagal memuat warga: ${snapshot.error}'));
+          }
+
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final data = snapshot.data!.data() as Map<String, dynamic>;
+          final rawData = snapshot.data!.data();
+          if (rawData == null) {
+            return const Center(child: Text('Data warga tidak ditemukan.'));
+          }
+
+          final data = rawData as Map<String, dynamic>;
           final nama = data["nama"] ?? "-";
           final rumah = data["rumah"] ?? "-";
           final hp = data["hp"] ?? "-";
@@ -93,11 +109,24 @@ class DetailWargaPage extends StatelessWidget {
           return StreamBuilder<QuerySnapshot>(
             stream: iuranRef.snapshots(),
             builder: (context, iuranSnapshot) {
+              if (iuranSnapshot.hasError) {
+                return Center(
+                  child: Text('Gagal memuat riwayat pembayaran: ${iuranSnapshot.error}'),
+                );
+              }
+
               if (!iuranSnapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              final iuranDocs = iuranSnapshot.data!.docs;
+              final iuranDocs = iuranSnapshot.data!.docs.toList()
+                ..sort((a, b) {
+                  final ta = (a.data() as Map<String, dynamic>)["tanggal"] as Timestamp?;
+                  final tb = (b.data() as Map<String, dynamic>)["tanggal"] as Timestamp?;
+                  return (tb?.millisecondsSinceEpoch ?? 0).compareTo(
+                    ta?.millisecondsSinceEpoch ?? 0,
+                  );
+                });
 
               num totalBayar = 0;
 
