@@ -77,10 +77,7 @@ class AuthService {
       throw Exception('User tidak ditemukan');
     }
 
-    final Map<String, dynamic> data = userDoc.data() ?? <String, dynamic>{};
-    if (data.isEmpty) {
-      throw Exception('Data user tidak valid');
-    }
+    final data = userDoc.data();
 
     if (data['password'] != hashPassword(password)) {
       throw Exception('Password salah');
@@ -148,12 +145,7 @@ class AuthService {
       throw Exception('Akun user tidak ditemukan');
     }
 
-    final Map<String, dynamic> userData =
-        userDoc.data() ?? <String, dynamic>{};
-    if (userData.isEmpty) {
-      throw Exception('Data akun user tidak valid');
-    }
-
+    final userData = userDoc.data();
     if (userData['password'] != hashPassword(currentPassword)) {
       throw Exception('Password saat ini salah');
     }
