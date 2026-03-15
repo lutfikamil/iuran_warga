@@ -21,8 +21,8 @@ class DashboardPage extends StatelessWidget {
       child: Card(
         elevation: 5,
         child: SizedBox(
-          width: 130,
-          height: 90,
+          width: 140,
+          height: 95,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
