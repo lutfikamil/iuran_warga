@@ -80,7 +80,8 @@ class DetailWargaPage extends StatelessWidget {
         .collection("transaksi")
         .where("jenis", isEqualTo: "masuk")
         .where("sumberPemasukan", isEqualTo: "iuran")
-        .where("wargaId", isEqualTo: wargaId);
+        .where("wargaId", isEqualTo: wargaId)
+        .orderBy("tanggal", descending: true);
 
     return Scaffold(
       appBar: AppBar(title: const Text("Detail Warga")),
