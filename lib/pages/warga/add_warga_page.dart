@@ -127,8 +127,8 @@ class _AddWargaPageState extends State<AddWargaPage> {
       'identifier': identifier,
       'role': role,
       'password': passwordHash,
-      'updatedAt': Timestamp.now(),
-      'createdAt': currentData['createdAt'] ?? Timestamp.now(),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'createdAt': currentData['createdAt'] ?? FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
     await batch.commit();
@@ -153,7 +153,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
         'hp': hp,
         'status': _selectedStatus,
         'role': _selectedRole,
-        'updatedAt': Timestamp.now(),
+        'updatedAt': FieldValue.serverTimestamp(),
       };
 
       String wargaId = widget.wargaId ?? '';
@@ -192,7 +192,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
           );
         }
       } else {
-        wargaData['createdAt'] = Timestamp.now();
+        wargaData['createdAt'] = FieldValue.serverTimestamp();
         final ref = await FirebaseFirestore.instance
             .collection('warga')
             .add(wargaData);

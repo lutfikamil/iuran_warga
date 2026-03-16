@@ -49,8 +49,8 @@ class PengeluaranService {
         "penerima": penerima,
         "keterangan": keterangan ?? '',
         "statusBendahara": "menunggu", // Status awal
-        "createdAt": Timestamp.now(),
-        "updatedAt": Timestamp.now(),
+        "createdAt": FieldValue.serverTimestamp(),
+        "updatedAt": FieldValue.serverTimestamp(),
       });
       _log('Pengeluaran berhasil ditambahkan.');
       await LogService().logEvent(
@@ -81,7 +81,7 @@ class PengeluaranService {
         "dari": dari,
         "penerima": penerima,
         "keterangan": keterangan ?? '',
-        "updatedAt": Timestamp.now(),
+        "updatedAt": FieldValue.serverTimestamp(),
         // jenis dan statusBendahara tidak diubah di sini
       });
       _log('Pengeluaran ID: $id berhasil diperbarui.');
