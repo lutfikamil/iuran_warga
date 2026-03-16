@@ -44,8 +44,8 @@ class PemasukanService {
         'keterangan': keterangan ?? '',
         'sumberPemasukan': 'umum',
         'statusBendahara': 'menunggu',
-        'createdAt': Timestamp.now(),
-        'updatedAt': Timestamp.now(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
       });
       _log('Pemasukan umum berhasil ditambahkan.');
       await LogService().logEvent(
@@ -75,7 +75,7 @@ class PemasukanService {
         'dari': dari,
         'penerima': penerima,
         'keterangan': keterangan ?? '',
-        'updatedAt': Timestamp.now(),
+        'updatedAt': FieldValue.serverTimestamp(),
       });
       _log('Pemasukan umum ID: $id berhasil diperbarui.');
       await LogService().logEvent(

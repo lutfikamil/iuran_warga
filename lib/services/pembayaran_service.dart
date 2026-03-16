@@ -12,9 +12,9 @@ class PembayaranService {
       ...data,
       'jenis': data['jenis'] ?? 'masuk',
       'sumberPemasukan': data['sumberPemasukan'] ?? 'iuran',
-      'tanggal': data['tanggal'] ?? Timestamp.now(),
-      'createdAt': data['createdAt'] ?? Timestamp.now(),
-      'updatedAt': data['updatedAt'] ?? Timestamp.now(),
+      'tanggal': data['tanggal'] ?? FieldValue.serverTimestamp(),
+      'createdAt': data['createdAt'] ?? FieldValue.serverTimestamp(),
+      'updatedAt': data['updatedAt'] ?? FieldValue.serverTimestamp(),
     };
 
     await collection.add(payload);
