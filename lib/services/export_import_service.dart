@@ -318,6 +318,7 @@ class ExportImportService {
           if (row.every(
             (cell) =>
                 cell == null ||
+                // ignore: invalid_null_aware_operator
                 cell?.value == null ||
                 cell.value.toString().trim().isEmpty,
           )) {
@@ -329,9 +330,7 @@ class ExportImportService {
             String rumah = row[2]?.value?.toString().trim() ?? '';
             String hp = row[3]?.value?.toString().trim() ?? '';
             String status = row[4]?.value?.toString().trim() ?? '';
-            String roleString =
-                row[5]?.value?.toString().trim() ??
-                'warga'; // Default 'warga' jika kosong
+            String roleString = row[5]?.value?.toString().trim() ?? 'warga';
             String tanggalBergabungString =
                 row[6]?.value?.toString().trim() ?? '';
 
