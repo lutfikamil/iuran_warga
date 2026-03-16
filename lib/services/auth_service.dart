@@ -155,7 +155,7 @@ class AuthService {
 
     await _db.collection('users').doc(userDoc.id).update({
       'password': hashPassword(newPassword),
-      'updatedAt': Timestamp.now(),
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 

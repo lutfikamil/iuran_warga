@@ -19,8 +19,8 @@ class LogService {
       'target': target,
       'detail': detail,
       'actorRole': role ?? 'unknown',
-      'timestamp': Timestamp.now(),
-      'createdAt': Timestamp.now(),
+      'timestamp': FieldValue.serverTimestamp(),
+      'createdAt': FieldValue.serverTimestamp(),
     });
   }
 

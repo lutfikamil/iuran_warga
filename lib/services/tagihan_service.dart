@@ -100,7 +100,7 @@ class TagihanService {
         // Tambahkan record transaksi masuk ke koleksi 'transaksi'
         final transaksiRef = _firestore.collection("transaksi").doc();
         transaction.set(transaksiRef, {
-          "tanggal": Timestamp.now(),
+          "tanggal": FieldValue.serverTimestamp(),
           "jenis": "masuk",
           "sumberPemasukan": "iuran",
           "wargaId": data["wargaId"],
@@ -112,15 +112,15 @@ class TagihanService {
               "Pembayaran iuran bulan ${data["bulan"]} untuk ID Tagihan: $tagihanId",
           "statusBendahara": "menunggu", // Status awal saat dimasukkan
           "referensiId": tagihanId, // Opsional: referensi ke tagihan aslinya
-          "createdAt": Timestamp.now(),
-          "updatedAt": Timestamp.now(),
+          "createdAt": FieldValue.serverTimestamp(),
+          "updatedAt": FieldValue.serverTimestamp(),
         });
 
         // Update status tagihan menjadi lunas
         transaction.update(tagihanRef, {
           "status": "lunas",
-          "updatedAt": Timestamp.now(),
-          "tanggalBayar": Timestamp.now(),
+          "updatedAt": FieldValue.serverTimestamp(),
+          "tanggalBayar": FieldValue.serverTimestamp(),
         });
       });
       _log('Pembayaran tagihan ID: $tagihanId berhasil.');

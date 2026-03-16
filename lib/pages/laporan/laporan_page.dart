@@ -93,7 +93,7 @@ class _LaporanPageState extends State<LaporanPage> {
               .doc(trxId);
           batch.update(trxRef, {
             'statusBendahara': 'diterima',
-            'updatedAt': Timestamp.now(),
+            'updatedAt': FieldValue.serverTimestamp(),
           });
         }
         await batch.commit();
