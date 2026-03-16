@@ -3,12 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'add_warga_page.dart';
 import '../../services/log_service.dart';
+import '../../utils/list_waktu_tagihan_util.dart';
 
 class DetailWargaPage extends StatelessWidget {
   final String wargaId;
 
-  const DetailWargaPage({super.key, required this.wargaId});
-
+  DetailWargaPage({super.key, required this.wargaId});
+  final waktuUtil = ListWaktuTagihan();
   Future<void> _deleteWarga(BuildContext context) async {
     final confirm = await showDialog(
       context: context,
@@ -66,8 +67,66 @@ class DetailWargaPage extends StatelessWidget {
     );
   }
 
-  String formatRupiah(num number) {
-    return "Rp ${number.toStringAsFixed(0)}";
+  Widget buildRekapCard(List<QueryDocumentSnapshot> docs) {
+    final tahunList = waktuUtil.getTahun(docs);
+
+    final rekap = waktuUtil.buildRekap(docs, tahunList);
+
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            const Text(
+              "Rekap Pembayaran",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+
+            const SizedBox(height: 12),
+
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                columns: [
+                  const DataColumn(label: Text("Bulan")),
+
+                  ...tahunList.map(
+                    (t) => DataColumn(label: Text(t.toString())),
+                  ),
+                ],
+
+                rows: waktuUtil.bulanList.map((bulan) {
+                  return DataRow(
+                    cells: [
+                      DataCell(Text(bulan)),
+
+                      ...tahunList.map((tahun) {
+                        final value = rekap[bulan]?[tahun];
+
+                        if (value == null) {
+                          return const DataCell(
+                            Text("Belum", style: TextStyle(color: Colors.red)),
+                          );
+                        }
+
+                        return DataCell(
+                          Text(
+                            value,
+                            style: const TextStyle(color: Colors.green),
+                          ),
+                        );
+                      }),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -111,7 +170,9 @@ class DetailWargaPage extends StatelessWidget {
             builder: (context, iuranSnapshot) {
               if (iuranSnapshot.hasError) {
                 return Center(
-                  child: Text('Gagal memuat riwayat pembayaran: ${iuranSnapshot.error}'),
+                  child: Text(
+                    'Gagal memuat riwayat pembayaran: ${iuranSnapshot.error}',
+                  ),
                 );
               }
 
@@ -121,8 +182,12 @@ class DetailWargaPage extends StatelessWidget {
 
               final iuranDocs = iuranSnapshot.data!.docs.toList()
                 ..sort((a, b) {
-                  final ta = (a.data() as Map<String, dynamic>)["tanggal"] as Timestamp?;
-                  final tb = (b.data() as Map<String, dynamic>)["tanggal"] as Timestamp?;
+                  final ta =
+                      (a.data() as Map<String, dynamic>)["tanggal"]
+                          as Timestamp?;
+                  final tb =
+                      (b.data() as Map<String, dynamic>)["tanggal"]
+                          as Timestamp?;
                   return (tb?.millisecondsSinceEpoch ?? 0).compareTo(
                     ta?.millisecondsSinceEpoch ?? 0,
                   );
@@ -199,7 +264,7 @@ class DetailWargaPage extends StatelessWidget {
                                     const Text("Total Bayar"),
                                     const SizedBox(height: 5),
                                     Text(
-                                      formatRupiah(totalBayar),
+                                      waktuUtil.formatRupiah(totalBayar),
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
@@ -255,25 +320,7 @@ class DetailWargaPage extends StatelessWidget {
                                 padding: EdgeInsets.all(10),
                                 child: Text("Belum ada pembayaran"),
                               ),
-
-                            ...iuranDocs.map((doc) {
-                              final data = doc.data() as Map<String, dynamic>;
-
-                              final jumlah = data["jumlah"] ?? 0;
-                              final ket = data["keterangan"] ?? "-";
-
-                              Timestamp? ts = data["tanggal"];
-                              DateTime? tanggal = ts?.toDate();
-                              final bulanTagihan = data["bulanTagihan"] ?? "-";
-
-                              return ListTile(
-                                leading: const Icon(Icons.payments),
-                                title: Text(formatRupiah(jumlah)),
-                                subtitle: Text(
-                                  "${tanggal ?? ""} | Bulan: $bulanTagihan | $ket",
-                                ),
-                              );
-                            }),
+                            buildRekapCard(iuranDocs),
                           ],
                         ),
                       ),

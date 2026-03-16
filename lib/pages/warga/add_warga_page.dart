@@ -74,10 +74,11 @@ class _AddWargaPageState extends State<AddWargaPage> {
         context,
       ).showSnackBar(SnackBar(content: Text('Gagal memuat data warga: $e')));
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -93,7 +94,10 @@ class _AddWargaPageState extends State<AddWargaPage> {
     final usersRef = FirebaseFirestore.instance.collection('users');
     final batch = FirebaseFirestore.instance.batch();
 
-    final byWarga = await usersRef.where('wargaId', isEqualTo: wargaId).limit(1).get();
+    final byWarga = await usersRef
+        .where('wargaId', isEqualTo: wargaId)
+        .limit(1)
+        .get();
 
     DocumentReference userDocRef;
     Map<String, dynamic> currentData = {};
@@ -233,10 +237,11 @@ class _AddWargaPageState extends State<AddWargaPage> {
         context,
       ).showSnackBar(SnackBar(content: Text('Gagal menyimpan warga: $e')));
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -252,7 +257,9 @@ class _AddWargaPageState extends State<AddWargaPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? 'Edit Warga' : 'Tambah Warga Baru')),
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Edit Warga' : 'Tambah Warga Baru'),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -303,7 +310,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedStatus,
+                initialValue: _selectedStatus,
                 decoration: const InputDecoration(
                   labelText: 'Status Rumah',
                   border: OutlineInputBorder(),
@@ -328,7 +335,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedRole,
+                initialValue: _selectedRole,
                 decoration: const InputDecoration(
                   labelText: 'Role Login User',
                   border: OutlineInputBorder(),
@@ -381,7 +388,9 @@ class _AddWargaPageState extends State<AddWargaPage> {
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                       child: Text(
-                        _isEditing ? 'Update Warga & Akun' : 'Simpan Warga & Buat Akun',
+                        _isEditing
+                            ? 'Update Warga & Akun'
+                            : 'Simpan Warga & Buat Akun',
                         style: const TextStyle(fontSize: 18),
                       ),
                     ),

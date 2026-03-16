@@ -21,10 +21,7 @@ class DefaultFirebaseOptions {
           'you can reconfigure this by running the FlutterFire CLI again.',
         );
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -39,19 +36,28 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyBIj75hC3hKrUz3mdwBiFLKkZiy1FfZe20',
-    authDomain: 'mulialand.firebaseapp.com',
-    projectId: 'mulialand',
-    storageBucket: 'mulialand.firebasestorage.app',
-    messagingSenderId: '308053015689',
     appId: '1:308053015689:web:7d00abd23f721854285a58',
+    messagingSenderId: '308053015689',
+    projectId: 'mulialand',
+    authDomain: 'mulialand.firebaseapp.com',
+    storageBucket: 'mulialand.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBIj75hC3hKrUz3mdwBiFLKkZiy1FfZe20',
-    authDomain: 'mulialand.firebaseapp.com',
+    apiKey: 'AIzaSyBdlZceQ1JgC779PbEeqwev7mxhqJ192GQ',
+    appId: '1:308053015689:android:85e2f3f1e9e3dbc3285a58',
+    messagingSenderId: '308053015689',
     projectId: 'mulialand',
     storageBucket: 'mulialand.firebasestorage.app',
-    messagingSenderId: '308053015689',
-    appId: '1:308053015689:android:85e2f3f1e9e3dbc3285a58',
   );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyBIj75hC3hKrUz3mdwBiFLKkZiy1FfZe20',
+    appId: '1:308053015689:web:7cf9d96863bb7dec285a58',
+    messagingSenderId: '308053015689',
+    projectId: 'mulialand',
+    authDomain: 'mulialand.firebaseapp.com',
+    storageBucket: 'mulialand.firebasestorage.app',
+  );
+
 }

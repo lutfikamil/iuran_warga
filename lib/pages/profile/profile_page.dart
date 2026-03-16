@@ -69,10 +69,11 @@ class _PasswordChangeFormState extends State<PasswordChangeForm> {
         context,
       ).showSnackBar(SnackBar(content: Text('Gagal mengganti password: $e')));
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _changingPassword = false;
-      });
+      if (mounted) {
+        setState(() {
+          _changingPassword = false;
+        });
+      }
     }
   }
 

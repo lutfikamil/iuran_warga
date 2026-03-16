@@ -10,7 +10,7 @@ final Logger _logger = Logger(
     lineLength: 80,
     colors: true,
     printEmojis: true,
-    printTime: false,
+    dateTimeFormat: DateTimeFormat.none,
   ),
 );
 
@@ -51,7 +51,8 @@ class PemasukanService {
       await LogService().logEvent(
         action: 'tambah_pemasukan',
         target: 'transaksi',
-        detail: 'Tambah pemasukan umum sebesar Rp ${jumlah.toStringAsFixed(0)} dari $dari',
+        detail:
+            'Tambah pemasukan umum sebesar Rp ${jumlah.toStringAsFixed(0)} dari $dari',
       );
     } catch (e, st) {
       _log('Gagal menambahkan pemasukan umum: $e', error: e, stackTrace: st);
@@ -81,7 +82,8 @@ class PemasukanService {
       await LogService().logEvent(
         action: 'update_pemasukan',
         target: 'transaksi',
-        detail: 'Update pemasukan id=$id menjadi Rp ${jumlah.toStringAsFixed(0)}',
+        detail:
+            'Update pemasukan id=$id menjadi Rp ${jumlah.toStringAsFixed(0)}',
       );
     } catch (e, st) {
       _log(

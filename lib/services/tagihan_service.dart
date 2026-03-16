@@ -13,7 +13,7 @@ final Logger _logger = Logger(
     lineLength: 80,
     colors: true,
     printEmojis: true,
-    printTime: false,
+    dateTimeFormat: DateTimeFormat.none,
   ),
 );
 
@@ -29,15 +29,19 @@ class TagihanService {
     }
   }
 
-  Future<void> generateTagihan(String bulan) async {
-    final wargaSnapshot = await _firestore.collection("warga").get();
-
-    final tagihanSnapshot = await _firestore
+  Future<void> generateTagihan(String bulan, int tahun) async {
+    final existingTagihan = await _firestore
         .collection("tagihan")
         .where("bulan", isEqualTo: bulan)
+        .where("tahun", isEqualTo: tahun)
+        .limit(1)
         .get();
 
-    final existing = tagihanSnapshot.docs.map((e) => e["wargaId"]).toSet();
+    if (existingTagihan.docs.isNotEmpty) {
+      throw Exception("Tagihan $bulan $tahun sudah pernah dibuat");
+    }
+
+    final wargaSnapshot = await _firestore.collection("warga").get();
 
     final iuranAmount = await SettingsService().getIuranAmount();
 
@@ -45,15 +49,12 @@ class TagihanService {
     int counter = 0;
 
     for (var warga in wargaSnapshot.docs) {
-      final wargaId = warga.id;
-
-      if (existing.contains(wargaId)) continue;
-
       final ref = _firestore.collection("tagihan").doc();
 
       batch.set(ref, {
-        "wargaId": wargaId,
+        "wargaId": warga.id,
         "bulan": bulan,
+        "tahun": tahun,
         "jumlah": iuranAmount,
         "status": "belum",
         "createdAt": FieldValue.serverTimestamp(),
@@ -69,6 +70,31 @@ class TagihanService {
     }
 
     await batch.commit();
+  }
+
+  Future<void> generateTagihanSetahun(int tahun) async {
+    final bulanList = [
+      "Januari",
+      "Februari",
+      "Maret",
+      "April",
+      "Mei",
+      "Juni",
+      "Juli",
+      "Agustus",
+      "September",
+      "Oktober",
+      "November",
+      "Desember",
+    ];
+
+    for (var bulan in bulanList) {
+      try {
+        await generateTagihan(bulan, tahun);
+      } catch (_) {
+        // jika sudah ada, skip
+      }
+    }
   }
 
   /// Memproses pembayaran tagihan.
@@ -105,6 +131,7 @@ class TagihanService {
           "sumberPemasukan": "iuran",
           "wargaId": data["wargaId"],
           "bulanTagihan": data["bulan"],
+          "tahunTagihan": data["tahun"],
           "jumlah": data["jumlah"],
           "dari": dariKeterangan,
           "penerima": "Bendahara", // Atau ambil dari session user yang login

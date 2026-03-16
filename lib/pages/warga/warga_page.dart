@@ -225,7 +225,7 @@ class _WargaPageState extends State<WargaPage> {
                     ],
                     backgroundColor: Theme.of(
                       context,
-                    ).colorScheme.primary.withOpacity(0.1), // Warna header
+                    ).colorScheme.primary.withValues(alpha: 0.1), // Warna header
                     textStyle: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.primary,

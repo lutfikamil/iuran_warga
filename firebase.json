@@ -1,16 +1,1 @@
-{
-  "hosting": {
-    "public": "build/web",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  }
-}
+{"hosting":{"public":"build/web","ignore":["firebase.json","**/.*","**/node_modules/**"],"rewrites":[{"source":"**","destination":"/index.html"}]},"flutter":{"platforms":{"android":{"default":{"projectId":"mulialand","appId":"1:308053015689:android:85e2f3f1e9e3dbc3285a58","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"mulialand","configurations":{"android":"1:308053015689:android:85e2f3f1e9e3dbc3285a58","web":"1:308053015689:web:7d00abd23f721854285a58","windows":"1:308053015689:web:7cf9d96863bb7dec285a58"}}}}}}

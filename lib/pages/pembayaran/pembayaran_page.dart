@@ -80,7 +80,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
 
     return TableRow(
       decoration: BoxDecoration(
-        color: index.isEven ? Colors.grey.withOpacity(0.05) : null,
+        color: index.isEven ? Colors.grey.withValues(alpha: 0.05) : null,
       ),
       children: [
         Padding(padding: _defaultPadding, child: Text((index + 1).toString())),
@@ -132,13 +132,19 @@ class _PembayaranPageState extends State<PembayaranPage> {
                     if (confirm == true) {
                       try {
                         await TagihanService().bayar(tagihanId);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Pembayaran berhasil!')),
-                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Pembayaran berhasil!'),
+                            ),
+                          );
+                        }
                       } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Gagal membayar: $e')),
-                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Gagal membayar: $e')),
+                          );
+                        }
                       }
                     }
                   },
