@@ -4,7 +4,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'add_warga_page.dart';
 import 'detail_warga_page.dart';
 import '../../services/export_import_service.dart';
-import '../../models/warga_model.dart'; // Pastikan path ini benar
+import '../../services/iuran_service.dart';
+import '../../services/session_service.dart';
+import '../../models/warga_model.dart';
+import '../../utils/list_waktu_iuran_util.dart';
 
 class WargaPage extends StatefulWidget {
   const WargaPage({super.key});
@@ -16,6 +19,22 @@ class WargaPage extends StatefulWidget {
 class _WargaPageState extends State<WargaPage> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  List<DocumentSnapshot> _allWargaDocs = [];
+  bool _isWarga = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserRole();
+  }
+
+  Future<void> _loadUserRole() async {
+    final role = await SessionService.getRole();
+    setState(() {
+      _isWarga = role == 'warga';
+    });
+  }
+
   int _hitungTunggakan(Map<String, dynamic>? pembayaran) {
     if (pembayaran == null) return DateTime.now().month;
 
@@ -32,12 +51,135 @@ class _WargaPageState extends State<WargaPage> {
     return tunggakan;
   }
 
-  List<DocumentSnapshot> _allWargaDocs = [];
-
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  /// =========================
+  /// GENERATE IURAN
+  /// =========================
+  Future<void> generateIuranDialog(BuildContext context) async {
+    String? selectedBulan;
+    int selectedTahun = DateTime.now().year;
+    final waktuUtil = ListWaktuIuran();
+    final result = await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text("Generate Iuran"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedBulan,
+                    hint: const Text("Pilih Bulan"),
+                    items: waktuUtil.bulanList.map((bulan) {
+                      return DropdownMenuItem(value: bulan, child: Text(bulan));
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedBulan = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<int>(
+                    initialValue: selectedTahun,
+                    items: List.generate(5, (i) {
+                      final tahun = DateTime.now().year + i;
+                      return DropdownMenuItem(
+                        value: tahun,
+                        child: Text(tahun.toString()),
+                      );
+                    }),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedTahun = value!;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Batal"),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context, {
+                      "bulan": selectedBulan,
+                      "tahun": selectedTahun,
+                    });
+                  },
+                  child: const Text("Generate"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result == null) return;
+
+    await IuranService().generateIuran(result["bulan"], result["tahun"]);
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Iuran berhasil dibuat")));
+  }
+
+  Future<void> generateIuranSetahunDialog(BuildContext context) async {
+    int selectedTahun = DateTime.now().year;
+
+    final tahun = await showDialog<int>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Generate Iuran 1 Tahun"),
+          content: DropdownButtonFormField<int>(
+            initialValue: selectedTahun,
+            items: List.generate(5, (i) {
+              final year = DateTime.now().year + i;
+              return DropdownMenuItem(
+                value: year,
+                child: Text(year.toString()),
+              );
+            }),
+            onChanged: (value) {
+              selectedTahun = value!;
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Batal"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, selectedTahun),
+              child: const Text("Generate"),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (tahun == null) return;
+
+    await IuranService().generateIuranSetahun(tahun);
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Iuran 1 tahun ($tahun) berhasil dibuat")),
+    );
   }
 
   // Fungsi untuk menampilkan menu export/import
@@ -55,7 +197,7 @@ class _WargaPageState extends State<WargaPage> {
                 leading: const Icon(Icons.file_download),
                 title: const Text('Export Excel'),
                 onTap: () async {
-                  Navigator.pop(bc); // Tutup bottom sheet
+                  Navigator.pop(bc);
                   await ExportImportService.exportWargaToExcel(
                     context,
                     wargaData,
@@ -66,7 +208,7 @@ class _WargaPageState extends State<WargaPage> {
                 leading: const Icon(Icons.picture_as_pdf),
                 title: const Text('Export PDF'),
                 onTap: () async {
-                  Navigator.pop(bc); // Tutup bottom sheet
+                  Navigator.pop(bc);
                   await ExportImportService.exportWargaToPdf(
                     context,
                     wargaData,
@@ -77,7 +219,7 @@ class _WargaPageState extends State<WargaPage> {
                 leading: const Icon(Icons.file_upload),
                 title: const Text('Import Excel'),
                 onTap: () async {
-                  Navigator.pop(bc); // Tutup bottom sheet
+                  Navigator.pop(bc);
                   await ExportImportService.importWargaFromExcel(context);
                 },
               ),
@@ -89,18 +231,16 @@ class _WargaPageState extends State<WargaPage> {
   }
 
   // --- Fungsi helper untuk membuat TableRow ---
-  // Fungsi ini mirip dengan yang di DetailWargaPage, tapi disesuaikan untuk data warga
   TableRow _buildWargaTableRow(
     List<Widget> cells, {
     Color? backgroundColor,
     TextStyle? textStyle,
-    VoidCallback? onTap, // Tambahkan onTap untuk setiap baris
+    VoidCallback? onTap,
   }) {
     return TableRow(
       decoration: BoxDecoration(color: backgroundColor),
       children: cells.map((cell) {
         return GestureDetector(
-          // Gunakan GestureDetector untuk onTap pada sel/baris
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(8.0),
@@ -120,21 +260,33 @@ class _WargaPageState extends State<WargaPage> {
       appBar: AppBar(
         title: const Text("Data Warga"),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.file_copy), // Icon untuk export/import
-            onPressed: () {
-              _showExportImportMenu(context, _allWargaDocs);
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AddWargaPage()),
-              );
-            },
-          ),
+          // Hanya admin/petugas yang bisa generate & export import
+          if (!_isWarga) ...[
+            IconButton(
+              icon: const Icon(Icons.calendar_month),
+              tooltip: "Generate 1 Tahun",
+              onPressed: () => generateIuranSetahunDialog(context),
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: "Generate Iuran",
+              onPressed: () => generateIuranDialog(context),
+            ),
+            IconButton(
+              icon: const Icon(Icons.file_copy),
+              tooltip: "Export / Import",
+              onPressed: () => _showExportImportMenu(context, _allWargaDocs),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AddWargaPage()),
+                );
+              },
+            ),
+          ],
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(kToolbarHeight + 8),
@@ -204,7 +356,6 @@ class _WargaPageState extends State<WargaPage> {
             );
           }
 
-          // --- Spreadsheet View dengan Table ---
           return SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: SingleChildScrollView(
@@ -220,7 +371,6 @@ class _WargaPageState extends State<WargaPage> {
                   5: FixedColumnWidth(100), // Tunggakan
                 },
                 children: [
-                  // Header Tabel
                   _buildWargaTableRow(
                     const [
                       Text("No", textAlign: TextAlign.center),
@@ -230,14 +380,14 @@ class _WargaPageState extends State<WargaPage> {
                       Text("Status", textAlign: TextAlign.center),
                       Text("Tunggakan", textAlign: TextAlign.center),
                     ],
-                    backgroundColor: Theme.of(context).colorScheme.primary
-                        .withValues(alpha: 0.1), // Warna header
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.1),
                     textStyle: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
-                  // Data Warga
                   ...List.generate(filteredWargaDocs.length, (index) {
                     final wargaDoc = filteredWargaDocs[index];
                     final warga = WargaModel.fromMap(
@@ -273,7 +423,7 @@ class _WargaPageState extends State<WargaPage> {
                       ],
                       backgroundColor: index.isEven
                           ? Colors.grey.shade50
-                          : Colors.white, // Zebra stripe
+                          : Colors.white,
                       onTap: () {
                         Navigator.push(
                           context,

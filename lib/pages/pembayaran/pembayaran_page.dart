@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import '../../services/iuran_service.dart';
 
 class PembayaranPage extends StatefulWidget {
@@ -10,8 +11,7 @@ class PembayaranPage extends StatefulWidget {
 }
 
 class _PembayaranPageState extends State<PembayaranPage> {
-  final ScrollController _horizontalScrollController = ScrollController();
-  final ScrollController _verticalScrollController = ScrollController();
+  final ScrollController _scrollController = ScrollController();
 
   static const EdgeInsets _defaultPadding = EdgeInsets.all(8.0);
   static const double _tableCellWidthNo = 50.0;
@@ -22,14 +22,95 @@ class _PembayaranPageState extends State<PembayaranPage> {
   static const double _tableCellWidthStatus = 80.0;
   static const double _tableCellWidthAksi = 120.0;
 
+  // Filter default: bulan & tahun sekarang
+  String _selectedBulan = DateFormat('MMMM', 'id_ID').format(DateTime.now());
+  int _selectedTahun = DateTime.now().year;
+  final List<String> _bulanList = [
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
+  ];
+
+  // Pagination
+  final List<DocumentSnapshot> _iuranDocs = [];
+  DocumentSnapshot? _lastDoc;
+  bool _isLoading = false;
+  bool _hasMore = true;
+
+  Map<String, Map<String, dynamic>> _wargaMap = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWarga();
+    _loadIuran(reset: true);
+
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 50 &&
+          !_isLoading &&
+          _hasMore) {
+        _loadIuran();
+      }
+    });
+  }
+
+  Future<void> _loadWarga() async {
+    final snap = await FirebaseFirestore.instance.collection("warga").get();
+    _wargaMap = {for (var d in snap.docs) d.id: d.data()};
+    setState(() {});
+  }
+
+  Future<void> _loadIuran({bool reset = false}) async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    if (reset) {
+      _iuranDocs.clear();
+      _lastDoc = null;
+      _hasMore = true;
+    }
+
+    Query query = FirebaseFirestore.instance
+        .collection("iuran")
+        .where("bulan", isEqualTo: _selectedBulan)
+        .where("tahun", isEqualTo: _selectedTahun)
+        .orderBy(
+          "wargaId",
+        ) // pastikan ada index composite (bulan, tahun, wargaId)
+        .limit(20);
+
+    if (_lastDoc != null) {
+      query = query.startAfterDocument(_lastDoc!);
+    }
+
+    final snap = await query.get();
+
+    if (snap.docs.isEmpty) {
+      _hasMore = false;
+    } else {
+      _iuranDocs.addAll(snap.docs);
+      _lastDoc = snap.docs.last;
+    }
+
+    setState(() => _isLoading = false);
+  }
+
   @override
   void dispose() {
-    _horizontalScrollController.dispose();
-    _verticalScrollController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  /// HEADER ROW TABLE
   TableRow _buildHeaderRow() {
     return const TableRow(
       decoration: BoxDecoration(color: Colors.blue),
@@ -66,7 +147,6 @@ class _PembayaranPageState extends State<PembayaranPage> {
     );
   }
 
-  /// DATA ROW TABLE
   TableRow _buildDataRow(
     int index,
     Map<String, dynamic> iuranData,
@@ -102,49 +182,31 @@ class _PembayaranPageState extends State<PembayaranPage> {
           child: status == "belum"
               ? ElevatedButton(
                   onPressed: () async {
-                    // Tampilkan dialog konfirmasi
                     final bool? confirm = await showDialog<bool>(
                       context: context,
-                      builder: (BuildContext dialogContext) {
-                        return AlertDialog(
-                          title: const Text('Konfirmasi Pembayaran'),
-                          content: Text(
-                            'Anda yakin ingin menandai iuran bulan "$bulanIuran" untuk "$namaWarga" sebesar Rp $jumlahIuran sebagai lunas?',
+                      builder: (c) => AlertDialog(
+                        title: const Text('Konfirmasi Pembayaran'),
+                        content: Text(
+                          'Anda yakin ingin menandai iuran bulan "$bulanIuran" untuk "$namaWarga" sebesar Rp $jumlahIuran sebagai lunas?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(c, false),
+                            child: const Text('Batal'),
                           ),
-                          actions: <Widget>[
-                            TextButton(
-                              onPressed: () =>
-                                  Navigator.of(dialogContext).pop(false),
-                              child: const Text('Batal'),
-                            ),
-                            FilledButton(
-                              // Menggunakan FilledButton untuk aksi positif
-                              onPressed: () =>
-                                  Navigator.of(dialogContext).pop(true),
-                              child: const Text('Ya, Bayar'),
-                            ),
-                          ],
-                        );
-                      },
+                          FilledButton(
+                            onPressed: () => Navigator.pop(c, true),
+                            child: const Text('Ya, Bayar'),
+                          ),
+                        ],
+                      ),
                     );
-
-                    // Jika user menekan 'Ya, Bayar'
                     if (confirm == true) {
-                      try {
-                        await IuranService().bayar(iuranId);
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Pembayaran berhasil!'),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Gagal membayar: $e')),
-                          );
-                        }
+                      await IuranService().bayar(iuranId);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Pembayaran berhasil!')),
+                        );
                       }
                     }
                   },
@@ -159,133 +221,185 @@ class _PembayaranPageState extends State<PembayaranPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Pembayaran Iuran")),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection("iuran").snapshots(),
-        builder: (context, iuranSnap) {
-          if (iuranSnap.hasError) {
-            return Center(child: Text('Terjadi kesalahan: ${iuranSnap.error}'));
-          }
-          if (!iuranSnap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final iuranDocs = iuranSnap.data!.docs;
-
-          return StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection("warga").snapshots(),
-            builder: (context, wargaSnap) {
-              if (wargaSnap.hasError) {
-                return Center(
-                  child: Text('Terjadi kesalahan: ${wargaSnap.error}'),
-                );
-              }
-              if (!wargaSnap.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final wargaDocs = wargaSnap.data!.docs;
-              final wargaMap = {
-                for (var doc in wargaDocs)
-                  doc.id: doc.data() as Map<String, dynamic>,
-              };
-              if (iuranDocs.isEmpty) {
-                return const Center(child: Text('Tidak ada data iuran.'));
-              }
-
-              return Padding(
-                padding: const EdgeInsets.all(12),
-                child: Scrollbar(
-                  controller: _horizontalScrollController,
-                  thumbVisibility: true,
-                  child: SingleChildScrollView(
-                    controller: _horizontalScrollController,
-                    scrollDirection: Axis.horizontal,
-                    child: Scrollbar(
-                      controller: _verticalScrollController,
-                      thumbVisibility: true,
-                      child: SingleChildScrollView(
-                        controller: _verticalScrollController,
-                        child: Table(
-                          border: TableBorder.all(color: Colors.grey.shade300),
-                          columnWidths: const {
-                            0: FixedColumnWidth(_tableCellWidthNo),
-                            1: FixedColumnWidth(_tableCellWidthRumah),
-                            2: FixedColumnWidth(_tableCellWidthNama),
-                            3: FixedColumnWidth(_tableCellWidthBulan),
-                            4: FixedColumnWidth(_tableCellWidthJumlah),
-                            5: FixedColumnWidth(_tableCellWidthStatus),
-                            6: FixedColumnWidth(_tableCellWidthAksi),
-                          },
-                          children: [
-                            _buildHeaderRow(),
-                            ...List.generate(iuranDocs.length, (index) {
-                              final iuranDoc = iuranDocs[index];
-                              final iuranData =
-                                  iuranDoc.data() as Map<String, dynamic>;
-                              final iuranId = iuranDoc.id;
-
-                              final String? wargaId = iuranData["wargaId"];
-                              if (wargaId == null ||
-                                  !wargaMap.containsKey(wargaId)) {
-                                return const TableRow(
-                                  children: [
-                                    Padding(
-                                      padding: _defaultPadding,
-                                      child: Text(''),
-                                    ),
-                                    Padding(
-                                      padding: _defaultPadding,
-                                      child: Text(
-                                        'Data Warga Tidak Ditemukan',
-                                        style: TextStyle(
-                                          fontStyle: FontStyle.italic,
-                                          color: Colors.red,
-                                        ),
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: _defaultPadding,
-                                      child: Text(''),
-                                    ),
-                                    Padding(
-                                      padding: _defaultPadding,
-                                      child: Text(''),
-                                    ),
-                                    Padding(
-                                      padding: _defaultPadding,
-                                      child: Text(''),
-                                    ),
-                                    Padding(
-                                      padding: _defaultPadding,
-                                      child: Text(''),
-                                    ),
-                                    Padding(
-                                      padding: _defaultPadding,
-                                      child: Text(''),
-                                    ),
-                                  ],
-                                );
-                              }
-
-                              final Map<String, dynamic> wargaData =
-                                  wargaMap[wargaId]!;
-                              return _buildDataRow(
-                                index,
-                                iuranData,
-                                wargaData,
-                                iuranId,
-                              );
-                            }),
-                          ],
-                        ),
-                      ),
-                    ),
+      appBar: AppBar(
+        title: const Text("Pembayaran Iuran"),
+        actions: [
+          // Filter bulan & tahun
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: DropdownButton<int>(
+              value: _selectedTahun,
+              underline: const SizedBox(),
+              items: List.generate(5, (i) => DateTime.now().year - 2 + i)
+                  .map(
+                    (t) =>
+                        DropdownMenuItem(value: t, child: Text(t.toString())),
+                  )
+                  .toList(),
+              onChanged: (v) {
+                setState(() => _selectedTahun = v!);
+                _loadIuran(reset: true);
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: DropdownButton<String>(
+              value: _selectedBulan,
+              underline: const SizedBox(),
+              items: _bulanList
+                  .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                  .toList(),
+              onChanged: (v) {
+                setState(() => _selectedBulan = v!);
+                _loadIuran(reset: true);
+              },
+            ),
+          ),
+        ],
+      ),
+      body: _wargaMap.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                // Header tetap
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Table(
+                    border: TableBorder.all(color: Colors.grey.shade300),
+                    columnWidths: const {
+                      0: FixedColumnWidth(_tableCellWidthNo),
+                      1: FixedColumnWidth(_tableCellWidthRumah),
+                      2: FixedColumnWidth(_tableCellWidthNama),
+                      3: FixedColumnWidth(_tableCellWidthBulan),
+                      4: FixedColumnWidth(_tableCellWidthJumlah),
+                      5: FixedColumnWidth(_tableCellWidthStatus),
+                      6: FixedColumnWidth(_tableCellWidthAksi),
+                    },
+                    children: [_buildHeaderRow()],
                   ),
                 ),
-              );
-            },
-          );
-        },
-      ),
+                // Body dengan scroll + pagination
+                Expanded(
+                  child: _iuranDocs.isEmpty && !_isLoading
+                      ? Center(
+                          child: Text(
+                            'Tidak ada data iuran untuk $_selectedBulan $_selectedTahun.',
+                          ),
+                        )
+                      : ListView.builder(
+                          controller: _scrollController,
+                          itemCount: _iuranDocs.length + (_hasMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == _iuranDocs.length) {
+                              return const Padding(
+                                padding: EdgeInsets.all(16),
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            }
+
+                            final iuranDoc = _iuranDocs[index];
+                            final iuranData =
+                                iuranDoc.data() as Map<String, dynamic>;
+                            final iuranId = iuranDoc.id;
+                            final wargaData = _wargaMap[iuranData["wargaId"]];
+
+                            if (wargaData == null) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                child: Table(
+                                  border: TableBorder.all(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                  columnWidths: const {
+                                    0: FixedColumnWidth(_tableCellWidthNo),
+                                    1: FixedColumnWidth(_tableCellWidthRumah),
+                                    2: FixedColumnWidth(_tableCellWidthNama),
+                                    3: FixedColumnWidth(_tableCellWidthBulan),
+                                    4: FixedColumnWidth(_tableCellWidthJumlah),
+                                    5: FixedColumnWidth(_tableCellWidthStatus),
+                                    6: FixedColumnWidth(_tableCellWidthAksi),
+                                  },
+                                  children: [
+                                    TableRow(
+                                      children: [
+                                        const Padding(
+                                          padding: _defaultPadding,
+                                          child: Text(''),
+                                        ),
+                                        const Padding(
+                                          padding: _defaultPadding,
+                                          child: Text(
+                                            'Data Warga Tidak Ditemukan',
+                                            style: TextStyle(
+                                              fontStyle: FontStyle.italic,
+                                              color: Colors.red,
+                                            ),
+                                          ),
+                                        ),
+                                        const Padding(
+                                          padding: _defaultPadding,
+                                          child: Text(''),
+                                        ),
+                                        const Padding(
+                                          padding: _defaultPadding,
+                                          child: Text(''),
+                                        ),
+                                        const Padding(
+                                          padding: _defaultPadding,
+                                          child: Text(''),
+                                        ),
+                                        const Padding(
+                                          padding: _defaultPadding,
+                                          child: Text(''),
+                                        ),
+                                        const Padding(
+                                          padding: _defaultPadding,
+                                          child: Text(''),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              child: Table(
+                                border: TableBorder.all(
+                                  color: Colors.grey.shade300,
+                                ),
+                                columnWidths: const {
+                                  0: FixedColumnWidth(_tableCellWidthNo),
+                                  1: FixedColumnWidth(_tableCellWidthRumah),
+                                  2: FixedColumnWidth(_tableCellWidthNama),
+                                  3: FixedColumnWidth(_tableCellWidthBulan),
+                                  4: FixedColumnWidth(_tableCellWidthJumlah),
+                                  5: FixedColumnWidth(_tableCellWidthStatus),
+                                  6: FixedColumnWidth(_tableCellWidthAksi),
+                                },
+                                children: [
+                                  _buildDataRow(
+                                    index,
+                                    iuranData,
+                                    wargaData,
+                                    iuranId,
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
     );
   }
 }

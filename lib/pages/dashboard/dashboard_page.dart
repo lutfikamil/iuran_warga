@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import '../../routes/app_routes.dart';
 import '../../services/session_service.dart';
 import '../../services/dashboard_service.dart';
-import '../../services/iuran_service.dart';
 import '../../widgets/dashboard/dashboard_stat.dart';
-import '../../utils/list_waktu_iuran_util.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -54,7 +52,7 @@ class DashboardPage extends StatelessWidget {
   /// MENU CARD
   /// =========================
   Widget menuCard(BuildContext context, Map<String, dynamic> menu) {
-    final color = menu["color"] ?? Colors.orange;
+    final color = menu["color"]?? Colors.orange;
     return InkWell(
       onTap: () => Navigator.pushNamed(context, menu["route"]),
       child: Card(
@@ -94,149 +92,16 @@ class DashboardPage extends StatelessWidget {
   }
 
   /// =========================
-  /// GENERATE IURAN
-  /// =========================
-  Future<void> generateIuranDialog(BuildContext context) async {
-    String? selectedBulan;
-    int selectedTahun = DateTime.now().year;
-    final waktuUtil = ListWaktuIuran();
-    final result = await showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text("Generate Iuran"),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedBulan,
-                    hint: const Text("Pilih Bulan"),
-                    items: waktuUtil.bulanList.map((bulan) {
-                      return DropdownMenuItem(value: bulan, child: Text(bulan));
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedBulan = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  DropdownButtonFormField<int>(
-                    initialValue: selectedTahun,
-                    items: List.generate(5, (i) {
-                      final tahun = DateTime.now().year + i;
-                      return DropdownMenuItem(
-                        value: tahun,
-                        child: Text(tahun.toString()),
-                      );
-                    }),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedTahun = value!;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Batal"),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context, {
-                      "bulan": selectedBulan,
-                      "tahun": selectedTahun,
-                    });
-                  },
-                  child: const Text("Generate"),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    if (result == null) return;
-
-    await IuranService().generateIuran(result["bulan"], result["tahun"]);
-
-    if (!context.mounted) return;
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("Iuran berhasil dibuat")));
-  }
-
-  /// =========================
   /// BUILD
   /// =========================
   @override
   Widget build(BuildContext context) {
     final dashboardService = DashboardService();
-    Future<void> generateIuranSetahunDialog(BuildContext context) async {
-      int selectedTahun = DateTime.now().year;
-
-      final tahun = await showDialog<int>(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text("Generate Iuran 1 Tahun"),
-            content: DropdownButtonFormField<int>(
-              initialValue: selectedTahun,
-              items: List.generate(5, (i) {
-                final year = DateTime.now().year + i;
-                return DropdownMenuItem(
-                  value: year,
-                  child: Text(year.toString()),
-                );
-              }),
-              onChanged: (value) {
-                selectedTahun = value!;
-              },
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Batal"),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, selectedTahun),
-                child: const Text("Generate"),
-              ),
-            ],
-          );
-        },
-      );
-
-      if (tahun == null) return;
-
-      await IuranService().generateIuranSetahun(tahun);
-
-      if (!context.mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Iuran 1 tahun ($tahun) berhasil dibuat")),
-      );
-    }
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("Dashboard Iuran"),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_month),
-            tooltip: "Generate 1 Tahun",
-            onPressed: () => generateIuranSetahunDialog(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => generateIuranDialog(context),
-          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => logout(context),
@@ -251,14 +116,14 @@ class DashboardPage extends StatelessWidget {
           dashboardService.totalTunggakan(),
         ]),
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
+          if (snapshot.connectionState!= ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final totalWarga = snapshot.data?[0] ?? 0;
-          final totalKas = snapshot.data?[1] ?? 0;
-          final belumBayar = snapshot.data?[2] ?? 0;
-          final tunggakan = snapshot.data?[3] ?? 0;
+          final totalWarga = snapshot.data?[0]?? 0;
+          final totalKas = snapshot.data?[1]?? 0;
+          final belumBayar = snapshot.data?[2]?? 0;
+          final tunggakan = snapshot.data?[3]?? 0;
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -332,8 +197,8 @@ class DashboardPage extends StatelessWidget {
                   spacing: 18,
                   runSpacing: 18,
                   children: menus
-                      .map((menu) => menuCard(context, menu))
-                      .toList(),
+                     .map((menu) => menuCard(context, menu))
+                     .toList(),
                 ),
               ],
             ),
