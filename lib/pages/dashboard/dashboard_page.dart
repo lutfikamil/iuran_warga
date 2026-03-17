@@ -110,7 +110,7 @@ class DashboardPage extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
-                    value: selectedBulan,
+                    initialValue: selectedBulan,
                     hint: const Text("Pilih Bulan"),
                     items: bulanList.map((bulan) {
                       return DropdownMenuItem(value: bulan, child: Text(bulan));
@@ -123,7 +123,7 @@ class DashboardPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<int>(
-                    value: selectedTahun,
+                    initialValue: selectedTahun,
                     items: List.generate(5, (i) {
                       final tahun = DateTime.now().year + i;
                       return DropdownMenuItem(
@@ -186,7 +186,7 @@ class DashboardPage extends StatelessWidget {
           return AlertDialog(
             title: const Text("Generate Tagihan 1 Tahun"),
             content: DropdownButtonFormField<int>(
-              value: selectedTahun,
+              initialValue: selectedTahun,
               items: List.generate(5, (i) {
                 final year = DateTime.now().year + i;
                 return DropdownMenuItem(
@@ -246,6 +246,8 @@ class DashboardPage extends StatelessWidget {
         future: Future.wait([
           dashboardService.totalWarga(),
           dashboardService.totalKas(),
+          dashboardService.wargaBelumBayar(),
+          dashboardService.totalTunggakan(),
         ]),
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
@@ -254,7 +256,8 @@ class DashboardPage extends StatelessWidget {
 
           final totalWarga = snapshot.data?[0] ?? 0;
           final totalKas = snapshot.data?[1] ?? 0;
-
+          final belumBayar = snapshot.data?[2] ?? 0;
+          final tunggakan = snapshot.data?[3] ?? 0;
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -274,6 +277,16 @@ class DashboardPage extends StatelessWidget {
                       title: "Total Kas",
                       value: "Rp $totalKas",
                       icon: Icons.account_balance_wallet,
+                    ),
+                    DashboardStat(
+                      title: "Belum Bayar",
+                      value: belumBayar.toString(),
+                      icon: Icons.warning,
+                    ),
+                    DashboardStat(
+                      title: "Total Tunggakan",
+                      value: "Rp $tunggakan",
+                      icon: Icons.money_off,
                     ),
                   ],
                 ),

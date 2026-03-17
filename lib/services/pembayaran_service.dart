@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/list_waktu_tagihan_util.dart';
 
 /// Legacy wrapper untuk data pembayaran.
 ///
@@ -8,13 +9,21 @@ class PembayaranService {
   final collection = FirebaseFirestore.instance.collection('transaksi');
 
   Future<void> tambahPembayaran(Map<String, dynamic> data) async {
+    final now = DateTime.now();
+    final String bulan = data['bulanTagihan'];
+    final int tahun = data['tahunTagihan'];
+    final bulanList = ListWaktuTagihan().bulanList;
+    final int bulanIndex = bulanList.indexOf(bulan) + 1;
     final payload = <String, dynamic>{
       ...data,
       'jenis': data['jenis'] ?? 'masuk',
       'sumberPemasukan': data['sumberPemasukan'] ?? 'iuran',
-      'tanggal': data['tanggal'] ?? FieldValue.serverTimestamp(),
-      'createdAt': data['createdAt'] ?? FieldValue.serverTimestamp(),
-      'updatedAt': data['updatedAt'] ?? FieldValue.serverTimestamp(),
+      'bulanTagihan': data['bulanTagihan'],
+      'tahunTagihan': data['tahunTagihan'],
+      'tanggal': data['tanggal'] ?? Timestamp.fromDate(now),
+      "jatuhTempo": Timestamp.fromDate(DateTime(tahun, bulanIndex, 10)),
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
     };
 
     await collection.add(payload);
