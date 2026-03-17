@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 import '../../services/iuran_service.dart';
 
 class PembayaranPage extends StatefulWidget {
@@ -23,7 +22,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
   static const double _tableCellWidthAksi = 120.0;
 
   // Filter default: bulan & tahun sekarang
-  String _selectedBulan = DateFormat('MMMM', 'id_ID').format(DateTime.now());
+  String _selectedBulan = '';
   int _selectedTahun = DateTime.now().year;
   final List<String> _bulanList = [
     'Januari',
@@ -51,6 +50,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
   @override
   void initState() {
     super.initState();
+    _selectedBulan = _bulanList[DateTime.now().month - 1];
     _loadWarga();
     _loadIuran(reset: true);
 
@@ -147,6 +147,18 @@ class _PembayaranPageState extends State<PembayaranPage> {
     );
   }
 
+  Future<void> _updateIuranMonth(String iuranId, String bulanBaru) async {
+    await FirebaseFirestore.instance.collection('iuran').doc(iuranId).update({
+      'bulan': bulanBaru,
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Bulan iuran diubah ke $bulanBaru.')));
+    _loadIuran(reset: true);
+  }
+
   TableRow _buildDataRow(
     int index,
     Map<String, dynamic> iuranData,
@@ -155,7 +167,8 @@ class _PembayaranPageState extends State<PembayaranPage> {
   ) {
     final status = iuranData["status"];
     final namaWarga = wargaData["nama"] ?? '-';
-    final bulanIuran = iuranData["bulan"] ?? '-';
+    final bulanIuran = (iuranData["bulan"] ?? '-').toString();
+    final selectedBulan = _bulanList.contains(bulanIuran) ? bulanIuran : null;
     final jumlahIuran = iuranData["jumlah"] ?? '0';
 
     return TableRow(
@@ -169,7 +182,28 @@ class _PembayaranPageState extends State<PembayaranPage> {
           child: Text(wargaData["rumah"] ?? '-'),
         ),
         Padding(padding: _defaultPadding, child: Text(namaWarga)),
-        Padding(padding: _defaultPadding, child: Text(bulanIuran)),
+        Padding(
+          padding: _defaultPadding,
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              isExpanded: true,
+              value: selectedBulan,
+              hint: const Text('Pilih bulan'),
+              items: _bulanList
+                  .map(
+                    (bulan) => DropdownMenuItem<String>(
+                      value: bulan,
+                      child: Text(bulan),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (bulanBaru) async {
+                if (bulanBaru == null || bulanBaru == bulanIuran) return;
+                await _updateIuranMonth(iuranId, bulanBaru);
+              },
+            ),
+          ),
+        ),
         Padding(padding: _defaultPadding, child: Text("Rp $jumlahIuran")),
         Padding(
           padding: _defaultPadding,
@@ -287,26 +321,91 @@ class _PembayaranPageState extends State<PembayaranPage> {
                             'Tidak ada data iuran untuk $_selectedBulan $_selectedTahun.',
                           ),
                         )
-                      : ListView.builder(
+                      : Scrollbar(
                           controller: _scrollController,
-                          itemCount: _iuranDocs.length + (_hasMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == _iuranDocs.length) {
-                              return const Padding(
-                                padding: EdgeInsets.all(16),
-                                child: Center(
-                                  child: CircularProgressIndicator(),
-                                ),
-                              );
-                            }
+                          thumbVisibility: true,
+                          trackVisibility: true,
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            itemCount: _iuranDocs.length + (_hasMore ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index == _iuranDocs.length) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                );
+                              }
 
-                            final iuranDoc = _iuranDocs[index];
-                            final iuranData =
-                                iuranDoc.data() as Map<String, dynamic>;
-                            final iuranId = iuranDoc.id;
-                            final wargaData = _wargaMap[iuranData["wargaId"]];
+                              final iuranDoc = _iuranDocs[index];
+                              final iuranData =
+                                  iuranDoc.data() as Map<String, dynamic>;
+                              final iuranId = iuranDoc.id;
+                              final wargaData = _wargaMap[iuranData["wargaId"]];
 
-                            if (wargaData == null) {
+                              if (wargaData == null) {
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                  ),
+                                  child: Table(
+                                    border: TableBorder.all(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                    columnWidths: const {
+                                      0: FixedColumnWidth(_tableCellWidthNo),
+                                      1: FixedColumnWidth(_tableCellWidthRumah),
+                                      2: FixedColumnWidth(_tableCellWidthNama),
+                                      3: FixedColumnWidth(_tableCellWidthBulan),
+                                      4: FixedColumnWidth(_tableCellWidthJumlah),
+                                      5: FixedColumnWidth(_tableCellWidthStatus),
+                                      6: FixedColumnWidth(_tableCellWidthAksi),
+                                    },
+                                    children: [
+                                      TableRow(
+                                        children: [
+                                          const Padding(
+                                            padding: _defaultPadding,
+                                            child: Text(''),
+                                          ),
+                                          const Padding(
+                                            padding: _defaultPadding,
+                                            child: Text(
+                                              'Data Warga Tidak Ditemukan',
+                                              style: TextStyle(
+                                                fontStyle: FontStyle.italic,
+                                                color: Colors.red,
+                                              ),
+                                            ),
+                                          ),
+                                          const Padding(
+                                            padding: _defaultPadding,
+                                            child: Text(''),
+                                          ),
+                                          const Padding(
+                                            padding: _defaultPadding,
+                                            child: Text(''),
+                                          ),
+                                          const Padding(
+                                            padding: _defaultPadding,
+                                            child: Text(''),
+                                          ),
+                                          const Padding(
+                                            padding: _defaultPadding,
+                                            child: Text(''),
+                                          ),
+                                          const Padding(
+                                            padding: _defaultPadding,
+                                            child: Text(''),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+
                               return Padding(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
@@ -325,77 +424,17 @@ class _PembayaranPageState extends State<PembayaranPage> {
                                     6: FixedColumnWidth(_tableCellWidthAksi),
                                   },
                                   children: [
-                                    TableRow(
-                                      children: [
-                                        const Padding(
-                                          padding: _defaultPadding,
-                                          child: Text(''),
-                                        ),
-                                        const Padding(
-                                          padding: _defaultPadding,
-                                          child: Text(
-                                            'Data Warga Tidak Ditemukan',
-                                            style: TextStyle(
-                                              fontStyle: FontStyle.italic,
-                                              color: Colors.red,
-                                            ),
-                                          ),
-                                        ),
-                                        const Padding(
-                                          padding: _defaultPadding,
-                                          child: Text(''),
-                                        ),
-                                        const Padding(
-                                          padding: _defaultPadding,
-                                          child: Text(''),
-                                        ),
-                                        const Padding(
-                                          padding: _defaultPadding,
-                                          child: Text(''),
-                                        ),
-                                        const Padding(
-                                          padding: _defaultPadding,
-                                          child: Text(''),
-                                        ),
-                                        const Padding(
-                                          padding: _defaultPadding,
-                                          child: Text(''),
-                                        ),
-                                      ],
+                                    _buildDataRow(
+                                      index,
+                                      iuranData,
+                                      wargaData,
+                                      iuranId,
                                     ),
                                   ],
                                 ),
                               );
-                            }
-
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                              ),
-                              child: Table(
-                                border: TableBorder.all(
-                                  color: Colors.grey.shade300,
-                                ),
-                                columnWidths: const {
-                                  0: FixedColumnWidth(_tableCellWidthNo),
-                                  1: FixedColumnWidth(_tableCellWidthRumah),
-                                  2: FixedColumnWidth(_tableCellWidthNama),
-                                  3: FixedColumnWidth(_tableCellWidthBulan),
-                                  4: FixedColumnWidth(_tableCellWidthJumlah),
-                                  5: FixedColumnWidth(_tableCellWidthStatus),
-                                  6: FixedColumnWidth(_tableCellWidthAksi),
-                                },
-                                children: [
-                                  _buildDataRow(
-                                    index,
-                                    iuranData,
-                                    wargaData,
-                                    iuranId,
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
+                            },
+                          ),
                         ),
                 ),
               ],
