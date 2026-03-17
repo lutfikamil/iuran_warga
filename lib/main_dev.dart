@@ -8,26 +8,34 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 🔥 INIT SESSION (WAJIB kalau pakai versi clean)
+  await SessionService.init();
+
+  // 🔥 Firebase init (bisa beda project kalau pakai multi env)
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   await FirestoreOfflineService.configure();
 
   await SessionService.init();
-  final isLogin = SessionService.isLogin();
 
-  runApp(MyApp(isLogin: isLogin));
+  runApp(const MyAppDev());
 }
 
-class MyApp extends StatelessWidget {
-  final bool isLogin;
-
-  const MyApp({super.key, required this.isLogin});
+class MyAppDev extends StatelessWidget {
+  const MyAppDev({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Aplikasi Iuran',
+    final isLogin = SessionService.isLogin();
 
-      debugShowCheckedModeBanner: false,
+    return MaterialApp(
+      title: 'Aplikasi Iuran (DEV)',
+
+      debugShowCheckedModeBanner: true, // 🔥 biar kelihatan DEV
+
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
+      ),
 
       initialRoute: isLogin ? AppRoutes.dashboard : AppRoutes.login,
 

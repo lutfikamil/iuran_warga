@@ -17,10 +17,10 @@ class _LaporanPageState extends State<LaporanPage> {
   final ScrollController _verticalScrollController = ScrollController();
 
   DateTime? _selectedDate; // Untuk filter bulan/tahun
-  String _filterType = 'Global'; // 'Global', 'Bulanan', 'Tahunan'
+  String _filterType = 'Detail'; // 'Detail', 'Bulanan', 'Tahunan'
 
   // List untuk menyimpan ID transaksi yang dipilih untuk aksi (checkbox)
-  List<String> _selectedTransactionIds = [];
+  final List<String> _selectedTransactionIds = [];
 
   // --- Fungsi untuk memilih bulan/tahun ---
   Future<void> _pickMonthYear(BuildContext context) async {
@@ -67,9 +67,9 @@ class _LaporanPageState extends State<LaporanPage> {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Setujui Transaksi'),
+        title: const Text('Menerima Transaksi'),
         content: Text(
-          'Apakah Anda yakin ingin menyetujui ${_selectedTransactionIds.length} transaksi terpilih?',
+          'Apakah Anda yakin menerima ${_selectedTransactionIds.length} transaksi terpilih?',
         ),
         actions: [
           TextButton(
@@ -100,26 +100,25 @@ class _LaporanPageState extends State<LaporanPage> {
         await LogService().logEvent(
           action: 'approve_transaksi',
           target: 'transaksi',
-          detail: 'Menyetujui ${_selectedTransactionIds.length} transaksi',
+          detail: 'Menerima ${_selectedTransactionIds.length} transaksi',
         );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                '${_selectedTransactionIds.length} transaksi berhasil disetujui!',
+                '${_selectedTransactionIds.length} transaksi berhasil diterima!',
               ),
             ),
           );
           setState(() {
-            _selectedTransactionIds
-                .clear(); // Bersihkan pilihan setelah disetujui
+            _selectedTransactionIds.clear();
           });
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal menyetujui transaksi: $e')),
+            SnackBar(content: Text('Gagal menerima transaksi: $e')),
           );
         }
       }
@@ -131,9 +130,8 @@ class _LaporanPageState extends State<LaporanPage> {
   static const double _colWidthNo = 50.0;
   static const double _colWidthTanggal = 100.0;
   static const double _colWidthJenis = 80.0;
-  static const double _colWidthMasukKeluar =
-      100.0; // Untuk Masuk, Keluar, Saldo
-  static const double _colWidthDariPenerima = 120.0; // Untuk Dari, Penerima
+  static const double _colWidthMasukKeluar = 100.0;
+  static const double _colWidthDariPenerima = 120.0;
   static const double _colWidthKeterangan = 200.0;
   static const double _colWidthStatusAksi = 80.0;
 
@@ -141,18 +139,18 @@ class _LaporanPageState extends State<LaporanPage> {
   TableRow _buildHeaderRow() {
     return TableRow(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
       ),
       children: [
         _buildHeaderCell("No", textAlign: TextAlign.center),
         _buildHeaderCell("Tanggal", textAlign: TextAlign.center),
         _buildHeaderCell("Jenis", textAlign: TextAlign.center),
-        _buildHeaderCell("Masuk", textAlign: TextAlign.right),
-        _buildHeaderCell("Keluar", textAlign: TextAlign.right),
-        _buildHeaderCell("Saldo", textAlign: TextAlign.right),
-        _buildHeaderCell("Dari", textAlign: TextAlign.left),
-        _buildHeaderCell("Penerima", textAlign: TextAlign.left),
-        _buildHeaderCell("Keterangan", textAlign: TextAlign.left),
+        _buildHeaderCell("Masuk", textAlign: TextAlign.center),
+        _buildHeaderCell("Keluar", textAlign: TextAlign.center),
+        _buildHeaderCell("Saldo", textAlign: TextAlign.center),
+        _buildHeaderCell("Dari", textAlign: TextAlign.center),
+        _buildHeaderCell("Penerima", textAlign: TextAlign.center),
+        _buildHeaderCell("Keterangan", textAlign: TextAlign.center),
         _buildHeaderCell("Aksi", textAlign: TextAlign.center),
       ],
     );
@@ -188,7 +186,6 @@ class _LaporanPageState extends State<LaporanPage> {
     final String penerima = transaction['penerima'] ?? '-';
     final String keterangan = transaction['keterangan'] ?? '-';
     final String statusBendahara = transaction['statusBendahara'] ?? 'menunggu';
-
     final bool isSelected = _selectedTransactionIds.contains(trxId);
     final bool isApproved = statusBendahara == 'diterima';
 

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../widgets/app_card.dart';
 
-class LaporanGlobalPage extends StatelessWidget {
-  const LaporanGlobalPage({super.key});
+class RekapLaporanPage extends StatelessWidget {
+  const RekapLaporanPage({super.key});
 
   @override
   Widget build(BuildContext context) {

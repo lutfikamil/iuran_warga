@@ -2,6 +2,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:iuran_perumahan/services/session_service.dart';
 import 'package:logger/logger.dart';
 import 'settings_service.dart';
 import 'log_service.dart';
@@ -122,8 +123,8 @@ class TagihanService {
         final String namaWarga = wargaData?['nama'] ?? 'Warga Tidak Diketahui';
         final String rumahWarga = wargaData?['rumah'] ?? '-';
         final String dariKeterangan = '$namaWarga (Rumah $rumahWarga)';
-
-        // Tambahkan record transaksi masuk ke koleksi 'transaksi'
+        final role = await SessionService.getRole();
+        //final namaUser = user?["user"] ?? "Unknown";
         final transaksiRef = _firestore.collection("transaksi").doc();
         transaction.set(transaksiRef, {
           "tanggal": FieldValue.serverTimestamp(),
@@ -134,7 +135,7 @@ class TagihanService {
           "tahunTagihan": data["tahun"],
           "jumlah": data["jumlah"],
           "dari": dariKeterangan,
-          "penerima": "Bendahara", // Atau ambil dari session user yang login
+          "penerima": role, // Ambil dari session user yang login
           "keterangan":
               "Pembayaran iuran bulan ${data["bulan"]} untuk ID Tagihan: $tagihanId",
           "statusBendahara": "menunggu", // Status awal saat dimasukkan

@@ -4,8 +4,7 @@ import '../pages/login/login_page.dart';
 import '../pages/dashboard/dashboard_page.dart';
 import '../pages/warga/warga_page.dart';
 import '../pages/pembayaran/pembayaran_page.dart';
-import '../pages/laporan/laporan_global_page.dart';
-//import '../pages/pembayaran/daftar_iuran_page.dart';
+import '../pages/laporan/rekap_laporan_page.dart';
 import '../pages/pengeluaran/pengeluaran_page.dart';
 import '../pages/pengeluaran/add_pengeluaran_page.dart';
 import '../pages/pemasukan/pemasukan_page.dart';
@@ -14,42 +13,7 @@ import '../pages/settings/settings_page.dart';
 import '../pages/profile/profile_page.dart';
 import '../services/auth_service.dart';
 
-// --- Bagian Baru: Enum untuk Peran dan Placeholder AuthService ---
-//enum UserRole {
-//  admin,
-//  ketua,
-//  bendahara,
-//  sekertaris,
-//  petugas,
-//  warga,
-//  unauthenticated, // Untuk pengguna yang belum login
-//}
-
-// Ini adalah placeholder. Di aplikasi nyata, ini akan berinteraksi dengan sistem otentikasi/otorisasi kamu.
-// Bisa pakai Provider, BLoC, GetX, atau InheritedWidget.
-//class AuthService {
-//  // Contoh peran pengguna saat ini. Di aplikasi nyata, ini didapat dari login.
-//  UserRole _currentUserRole =
-//      UserRole.admin; // Ganti ini untuk testing peran berbeda
-//
-//  UserRole get currentUserRole => _currentUserRole;
-//
-//  // Metode untuk mengubah peran (hanya untuk simulasi/testing)
-//  void setUserRole(UserRole role) {
-//    _currentUserRole = role;
-//  }
-//
-//  // Metode untuk memeriksa apakah pengguna memiliki salah satu peran yang diizinkan
-//  bool hasAnyRole(List<UserRole> allowedRoles) {
-//    if (allowedRoles.isEmpty)
-//      return true; // Jika tidak ada peran spesifik, semua boleh akses
-//    return allowedRoles.contains(_currentUserRole);
-//  }
-//}
-
-// Inisialisasi AuthService (di aplikasi nyata mungkin di-inject atau di-provide)
 final AuthService authService = AuthService();
-// --- Akhir Bagian Baru ---
 
 class AppRoutes {
   static const login = "/";
@@ -62,12 +26,9 @@ class AppRoutes {
   static const addPemasukan = "/add_pemasukan";
   static const laporan = "/laporan";
   static const laporanGlobal = "/laporan_global";
-  //static const daftarIuran = "/daftar_iuran";
   static const settings = "/settings";
   static const profile = "/profile";
-  static const unauthorized = "/unauthorized"; // Rute baru untuk akses ditolak
-
-  // --- Bagian Baru: Widget untuk Role Guard ---
+  static const unauthorized = "/unauthorized";
   static Widget _buildGuardedRoute({
     required Widget page,
     required List<UserRole> allowedRoles,
@@ -77,13 +38,11 @@ class AppRoutes {
         if (authService.hasAnyRole(allowedRoles)) {
           return page;
         } else {
-          // Arahkan ke halaman unauthorized jika peran tidak sesuai
           return const UnauthorizedPage();
         }
       },
     );
   }
-  // --- Akhir Bagian Baru ---
 
   static Map<String, WidgetBuilder> routes = {
     login: (_) => const LoginPage(),
@@ -137,7 +96,7 @@ class AppRoutes {
       ],
     ),
     laporanGlobal: (_) => _buildGuardedRoute(
-      page: const LaporanGlobalPage(),
+      page: const RekapLaporanPage(),
       allowedRoles: [UserRole.admin, UserRole.ketua],
     ),
     //daftarIuran: (_) => _buildGuardedRoute(

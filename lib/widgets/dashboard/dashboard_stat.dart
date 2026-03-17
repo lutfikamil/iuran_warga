@@ -4,12 +4,13 @@ class DashboardStat extends StatelessWidget {
   final String title;
   final String value;
   final IconData icon;
-
+  final Color? iconColor;
   const DashboardStat({
     super.key,
     required this.title,
     required this.value,
     required this.icon,
+    this.iconColor,
   });
 
   @override

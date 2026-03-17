@@ -4,30 +4,22 @@ import '../../services/session_service.dart';
 import '../../services/dashboard_service.dart';
 import '../../services/tagihan_service.dart';
 import '../../widgets/dashboard/dashboard_stat.dart';
+import '../../utils/list_waktu_tagihan_util.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
-
-  static const List<String> bulanList = [
-    "Januari",
-    "Februari",
-    "Maret",
-    "April",
-    "Mei",
-    "Juni",
-    "Juli",
-    "Agustus",
-    "September",
-    "Oktober",
-    "November",
-    "Desember",
-  ];
 
   /// =========================
   /// MENU LIST
   /// =========================
   List<Map<String, dynamic>> get menus => [
-    {"title": "Data Warga", "icon": Icons.people, "route": AppRoutes.warga},
+    {"title": "Profile", "icon": Icons.person, "route": AppRoutes.profile},
+    {
+      "title": "Data Warga",
+      "icon": Icons.people,
+      "route": AppRoutes.warga,
+      "color": Colors.green,
+    },
     {
       "title": "Pembayaran",
       "icon": Icons.payments,
@@ -35,18 +27,20 @@ class DashboardPage extends StatelessWidget {
     },
     {
       "title": "Pemasukan Umum",
-      "icon": Icons.trending_up,
+      "icon": Icons.trending_down,
       "route": AppRoutes.pemasukan,
+      "color": Colors.green,
     },
     {
       "title": "Pengeluaran",
-      "icon": Icons.trending_down,
+      "icon": Icons.trending_up,
       "route": AppRoutes.pengeluaran,
+      "color": Colors.red,
     },
     {"title": "Laporan", "icon": Icons.bar_chart, "route": AppRoutes.laporan},
     {
       "title": "Laporan Global",
-      "icon": Icons.bar_chart,
+      "icon": Icons.book,
       "route": AppRoutes.laporanGlobal,
     },
     {
@@ -54,13 +48,13 @@ class DashboardPage extends StatelessWidget {
       "icon": Icons.settings,
       "route": AppRoutes.settings,
     },
-    {"title": "Profile", "icon": Icons.person, "route": AppRoutes.profile},
   ];
 
   /// =========================
   /// MENU CARD
   /// =========================
   Widget menuCard(BuildContext context, Map<String, dynamic> menu) {
+    final color = menu["color"] ?? Colors.orange;
     return InkWell(
       onTap: () => Navigator.pushNamed(context, menu["route"]),
       child: Card(
@@ -71,7 +65,14 @@ class DashboardPage extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(menu["icon"], size: 32),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(menu["icon"], size: 32, color: color),
+              ),
               const SizedBox(height: 10),
               Text(menu["title"]),
             ],
@@ -98,7 +99,7 @@ class DashboardPage extends StatelessWidget {
   Future<void> generateTagihanDialog(BuildContext context) async {
     String? selectedBulan;
     int selectedTahun = DateTime.now().year;
-
+    final waktuUtil = ListWaktuTagihan();
     final result = await showDialog(
       context: context,
       builder: (context) {
@@ -112,7 +113,7 @@ class DashboardPage extends StatelessWidget {
                   DropdownButtonFormField<String>(
                     initialValue: selectedBulan,
                     hint: const Text("Pilih Bulan"),
-                    items: bulanList.map((bulan) {
+                    items: waktuUtil.bulanList.map((bulan) {
                       return DropdownMenuItem(value: bulan, child: Text(bulan));
                     }).toList(),
                     onChanged: (value) {
@@ -263,32 +264,59 @@ class DashboardPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                /// STATISTIK
-                Wrap(
-                  spacing: 18,
-                  runSpacing: 18,
-                  children: [
-                    DashboardStat(
-                      title: "Total Warga",
-                      value: totalWarga.toString(),
-                      icon: Icons.people,
-                    ),
-                    DashboardStat(
-                      title: "Total Kas",
-                      value: "Rp $totalKas",
-                      icon: Icons.account_balance_wallet,
-                    ),
-                    DashboardStat(
-                      title: "Belum Bayar",
-                      value: belumBayar.toString(),
-                      icon: Icons.warning,
-                    ),
-                    DashboardStat(
-                      title: "Total Tunggakan",
-                      value: "Rp $tunggakan",
-                      icon: Icons.money_off,
-                    ),
-                  ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    int crossAxisCount = 2;
+
+                    if (constraints.maxWidth > 900) {
+                      crossAxisCount = 4; // desktop
+                    } else if (constraints.maxWidth > 600) {
+                      crossAxisCount = 3; // tablet
+                    }
+
+                    double itemWidth =
+                        (constraints.maxWidth - (18 * (crossAxisCount - 1))) /
+                        crossAxisCount;
+
+                    return Wrap(
+                      spacing: 18,
+                      runSpacing: 18,
+                      children: [
+                        SizedBox(
+                          width: itemWidth,
+                          child: DashboardStat(
+                            title: "Total Warga",
+                            value: totalWarga.toString(),
+                            icon: Icons.people,
+                          ),
+                        ),
+                        SizedBox(
+                          width: itemWidth,
+                          child: DashboardStat(
+                            title: "Total Kas",
+                            value: "Rp $totalKas",
+                            icon: Icons.account_balance_wallet,
+                          ),
+                        ),
+                        SizedBox(
+                          width: itemWidth,
+                          child: DashboardStat(
+                            title: "Belum Bayar",
+                            value: belumBayar.toString(),
+                            icon: Icons.warning,
+                          ),
+                        ),
+                        SizedBox(
+                          width: itemWidth,
+                          child: DashboardStat(
+                            title: "Total Tunggakan",
+                            value: "Rp $tunggakan",
+                            icon: Icons.money_off,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 30),
