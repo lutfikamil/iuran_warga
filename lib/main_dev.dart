@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'routes/app_routes.dart';
 import 'services/firestore_offline_service.dart';
 import 'services/session_service.dart';
@@ -15,6 +16,7 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await FirestoreOfflineService.configure();
+  await initializeDateFormatting('id_ID', null);
 
   await SessionService.init();
 
