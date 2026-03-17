@@ -50,7 +50,7 @@ class _SettingsPageState extends State<SettingsPage> {
     await _settingsService.updateIuranAmount(value);
     await LogService().logEvent(
       action: 'update_setting_iuran',
-      target: 'settings/tagihan',
+      target: 'settings/iuran',
       detail: 'Ubah nominal iuran menjadi Rp ${value.toStringAsFixed(0)}',
     );
 

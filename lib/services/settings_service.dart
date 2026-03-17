@@ -4,7 +4,7 @@ class SettingsService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<double> getIuranAmount() async {
-    final doc = await _firestore.collection('settings').doc('tagihan').get();
+    final doc = await _firestore.collection('settings').doc('iuran').get();
 
     if (!doc.exists) {
       return 55000;
@@ -15,7 +15,7 @@ class SettingsService {
   }
 
   Future<void> updateIuranAmount(double amount) async {
-    await _firestore.collection('settings').doc('tagihan').set({
+    await _firestore.collection('settings').doc('iuran').set({
       "iuran_amount": amount,
     }, SetOptions(merge: true));
   }

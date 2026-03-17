@@ -16,9 +16,23 @@ class WargaPage extends StatefulWidget {
 class _WargaPageState extends State<WargaPage> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  int _hitungTunggakan(Map<String, dynamic>? pembayaran) {
+    if (pembayaran == null) return DateTime.now().month;
 
-  List<DocumentSnapshot> _allWargaDocs =
-      []; // Untuk menyimpan semua dokumen warga
+    final now = DateTime.now();
+    int tunggakan = 0;
+
+    for (int i = 1; i <= now.month; i++) {
+      final isPaid = pembayaran[i.toString()] == true;
+      if (!isPaid) {
+        tunggakan++;
+      }
+    }
+
+    return tunggakan;
+  }
+
+  List<DocumentSnapshot> _allWargaDocs = [];
 
   @override
   void dispose() {
@@ -62,15 +76,9 @@ class _WargaPageState extends State<WargaPage> {
               ListTile(
                 leading: const Icon(Icons.file_upload),
                 title: const Text('Import Excel'),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(bc); // Tutup bottom sheet
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Fitur Import Excel belum diimplementasikan sepenuhnya',
-                      ),
-                    ),
-                  );
+                  await ExportImportService.importWargaFromExcel(context);
                 },
               ),
             ],
@@ -198,11 +206,8 @@ class _WargaPageState extends State<WargaPage> {
 
           // --- Spreadsheet View dengan Table ---
           return SingleChildScrollView(
-            // Tambahkan SingleChildScrollView agar bisa discroll jika kolom terlalu banyak
-            scrollDirection:
-                Axis.vertical, // Scroll vertikal untuk seluruh tabel
+            scrollDirection: Axis.vertical,
             child: SingleChildScrollView(
-              // SingleChildScrollView untuk scroll horizontal jika tabel terlalu lebar
               scrollDirection: Axis.horizontal,
               child: Table(
                 border: TableBorder.all(color: Colors.grey.shade300),
@@ -212,20 +217,21 @@ class _WargaPageState extends State<WargaPage> {
                   2: FixedColumnWidth(80), // Rumah
                   3: FixedColumnWidth(120), // HP
                   4: FixedColumnWidth(100), // Status
+                  5: FixedColumnWidth(100), // Tunggakan
                 },
                 children: [
                   // Header Tabel
                   _buildWargaTableRow(
                     const [
                       Text("No", textAlign: TextAlign.center),
-                      Text("Nama", textAlign: TextAlign.left),
+                      Text("Nama", textAlign: TextAlign.center),
                       Text("Rumah", textAlign: TextAlign.center),
-                      Text("HP", textAlign: TextAlign.left),
+                      Text("HP", textAlign: TextAlign.center),
                       Text("Status", textAlign: TextAlign.center),
+                      Text("Tunggakan", textAlign: TextAlign.center),
                     ],
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.primary.withValues(alpha: 0.1), // Warna header
+                    backgroundColor: Theme.of(context).colorScheme.primary
+                        .withValues(alpha: 0.1), // Warna header
                     textStyle: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.primary,
@@ -238,7 +244,10 @@ class _WargaPageState extends State<WargaPage> {
                       wargaDoc.id,
                       wargaDoc.data() as Map<String, dynamic>,
                     );
+                    final data = wargaDoc.data() as Map<String, dynamic>;
+                    final pembayaran = data['pembayaran'];
 
+                    final jumlahTunggakan = _hitungTunggakan(pembayaran);
                     return _buildWargaTableRow(
                       [
                         Text(
@@ -249,6 +258,18 @@ class _WargaPageState extends State<WargaPage> {
                         Text(warga.rumah, textAlign: TextAlign.center),
                         Text(warga.hp, textAlign: TextAlign.left),
                         Text(warga.status, textAlign: TextAlign.center),
+                        Text(
+                          jumlahTunggakan == 0
+                              ? "Lunas"
+                              : "$jumlahTunggakan bln",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: jumlahTunggakan > 0
+                                ? Colors.red
+                                : Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                       backgroundColor: index.isEven
                           ? Colors.grey.shade50

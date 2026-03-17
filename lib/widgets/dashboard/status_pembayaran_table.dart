@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../services/tagihan_service.dart'; // Pastikan path ini benar
+import '../../services/iuran_service.dart'; // Pastikan path ini benar
 
 class StatusPembayaranTable extends StatefulWidget {
   const StatusPembayaranTable({super.key});
@@ -74,19 +74,19 @@ class _StatusPembayaranTableState extends State<StatusPembayaranTable> {
   /// DATA ROW TABLE
   TableRow _buildDataRow(
     int index,
-    Map<String, dynamic> tagihanData,
+    Map<String, dynamic> iuranData,
     Map<String, dynamic> wargaData,
-    String tagihanId,
+    String iuranId,
   ) {
-    final status = tagihanData["status"];
-    final num jumlah = (tagihanData["jumlah"] as num?) ?? 0;
+    final status = iuranData["status"];
+    final num jumlah = (iuranData["jumlah"] as num?) ?? 0;
 
     final String formattedJumlah =
         "Rp ${jumlah.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}";
 
     return TableRow(
       decoration: BoxDecoration(
-        color: index.isEven ? Colors.grey.withOpacity(0.05) : null,
+        color: index.isEven ? Colors.grey.withValues(alpha: 0.05) : null,
       ),
       children: [
         Padding(padding: _defaultPadding, child: Text((index + 1).toString())),
@@ -100,7 +100,7 @@ class _StatusPembayaranTableState extends State<StatusPembayaranTable> {
         ),
         Padding(
           padding: _defaultPadding,
-          child: Text(tagihanData["bulan"] ?? '-'),
+          child: Text(iuranData["bulan"] ?? '-'),
         ),
         Padding(padding: _defaultPadding, child: Text(formattedJumlah)),
         Padding(
@@ -115,7 +115,7 @@ class _StatusPembayaranTableState extends State<StatusPembayaranTable> {
               ? ElevatedButton(
                   onPressed: () async {
                     try {
-                      await TagihanService().bayar(tagihanId);
+                      await IuranService().bayar(iuranId);
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Pembayaran berhasil!')),
@@ -170,22 +170,20 @@ class _StatusPembayaranTableState extends State<StatusPembayaranTable> {
         Expanded(
           // Expanded agar tabel bisa mengisi sisa ruang yang tersedia
           child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection("tagihan")
-                .snapshots(),
-            builder: (context, tagihanSnap) {
-              if (tagihanSnap.hasError) {
+            stream: FirebaseFirestore.instance.collection("iuran").snapshots(),
+            builder: (context, iuranSnap) {
+              if (iuranSnap.hasError) {
                 return Center(
                   child: Text(
-                    'Terjadi kesalahan: ${tagihanSnap.error}',
+                    'Terjadi kesalahan: ${iuranSnap.error}',
                     style: const TextStyle(color: Colors.red),
                   ),
                 );
               }
-              if (!tagihanSnap.hasData) {
+              if (!iuranSnap.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
-              List<DocumentSnapshot> allTagihanDocs = tagihanSnap.data!.docs;
+              List<DocumentSnapshot> allIuranDocs = iuranSnap.data!.docs;
 
               return StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
@@ -209,12 +207,11 @@ class _StatusPembayaranTableState extends State<StatusPembayaranTable> {
                       doc.id: doc.data() as Map<String, dynamic>,
                   };
 
-                  // --- Filter data tagihan berdasarkan search query ---
+                  // --- Filter data iuran berdasarkan search query ---
                   List<DocumentSnapshot>
-                  filteredTagihanDocs = allTagihanDocs.where((tagihanDoc) {
-                    final tagihanData =
-                        tagihanDoc.data() as Map<String, dynamic>;
-                    final String? wargaId = tagihanData["wargaId"];
+                  filteredIuranDocs = allIuranDocs.where((iuranDoc) {
+                    final iuranData = iuranDoc.data() as Map<String, dynamic>;
+                    final String? wargaId = iuranData["wargaId"];
 
                     // Jika wargaId tidak ditemukan, anggap tidak cocok dengan pencarian
                     if (wargaId == null || !wargaMap.containsKey(wargaId)) {
@@ -224,24 +221,23 @@ class _StatusPembayaranTableState extends State<StatusPembayaranTable> {
                     final wargaData = wargaMap[wargaId]!;
                     final namaWarga = wargaData["nama"]?.toLowerCase() ?? '';
                     final rumahWarga = wargaData["rumah"]?.toLowerCase() ?? '';
-                    final bulanTagihan =
-                        tagihanData["bulan"]?.toLowerCase() ?? '';
-                    final statusTagihan =
-                        tagihanData["status"]?.toLowerCase() ?? '';
+                    final bulanIuran = iuranData["bulan"]?.toLowerCase() ?? '';
+                    final statusIuran =
+                        iuranData["status"]?.toLowerCase() ?? '';
 
                     return namaWarga.contains(_searchQuery) ||
                         rumahWarga.contains(_searchQuery) ||
-                        bulanTagihan.contains(_searchQuery) ||
-                        statusTagihan.contains(_searchQuery);
+                        bulanIuran.contains(_searchQuery) ||
+                        statusIuran.contains(_searchQuery);
                   }).toList();
 
-                  // Tampilan jika tidak ada data tagihan setelah filter
-                  if (filteredTagihanDocs.isEmpty) {
+                  // Tampilan jika tidak ada data iuran setelah filter
+                  if (filteredIuranDocs.isEmpty) {
                     return Center(
                       child: Text(
                         _searchQuery.isEmpty
-                            ? 'Tidak ada data tagihan.'
-                            : 'Tidak ada tagihan yang cocok dengan "$_searchQuery".',
+                            ? 'Tidak ada data iuran.'
+                            : 'Tidak ada iuran yang cocok dengan "$_searchQuery".',
                       ),
                     );
                   }
@@ -274,25 +270,24 @@ class _StatusPembayaranTableState extends State<StatusPembayaranTable> {
                               },
                               children: [
                                 _buildHeaderRow(),
-                                ...List.generate(filteredTagihanDocs.length, (
+                                ...List.generate(filteredIuranDocs.length, (
                                   index,
                                 ) {
-                                  final tagihanDoc = filteredTagihanDocs[index];
-                                  final tagihanData =
-                                      tagihanDoc.data() as Map<String, dynamic>;
-                                  final tagihanId = tagihanDoc.id;
+                                  final iuranDoc = filteredIuranDocs[index];
+                                  final iuranData =
+                                      iuranDoc.data() as Map<String, dynamic>;
+                                  final iuranId = iuranDoc.id;
 
-                                  final String? wargaId =
-                                      tagihanData["wargaId"];
+                                  final String? wargaId = iuranData["wargaId"];
                                   // Kita sudah memfilter di atas, jadi ini seharusnya selalu ada
                                   final Map<String, dynamic> wargaData =
                                       wargaMap[wargaId]!;
 
                                   return _buildDataRow(
                                     index,
-                                    tagihanData,
+                                    iuranData,
                                     wargaData,
-                                    tagihanId,
+                                    iuranId,
                                   );
                                 }),
                               ],

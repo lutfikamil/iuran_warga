@@ -1,4 +1,4 @@
-// File: lib/services/tagihan_service.dart (MODIFIED)
+// File: lib/services/iuran_service.dart (MODIFIED)
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
@@ -18,10 +18,10 @@ final Logger _logger = Logger(
   ),
 );
 
-class TagihanService {
+class IuranService {
   final FirebaseFirestore _firestore;
 
-  TagihanService({FirebaseFirestore? firestore})
+  IuranService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
 
   void _log(dynamic message, {dynamic error, StackTrace? stackTrace}) {
@@ -30,16 +30,16 @@ class TagihanService {
     }
   }
 
-  Future<void> generateTagihan(String bulan, int tahun) async {
-    final existingTagihan = await _firestore
-        .collection("tagihan")
+  Future<void> generateIuran(String bulan, int tahun) async {
+    final existingIuran = await _firestore
+        .collection("iuran")
         .where("bulan", isEqualTo: bulan)
         .where("tahun", isEqualTo: tahun)
         .limit(1)
         .get();
 
-    if (existingTagihan.docs.isNotEmpty) {
-      throw Exception("Tagihan $bulan $tahun sudah pernah dibuat");
+    if (existingIuran.docs.isNotEmpty) {
+      throw Exception("Iuran $bulan $tahun sudah pernah dibuat");
     }
 
     final wargaSnapshot = await _firestore.collection("warga").get();
@@ -50,7 +50,7 @@ class TagihanService {
     int counter = 0;
 
     for (var warga in wargaSnapshot.docs) {
-      final ref = _firestore.collection("tagihan").doc();
+      final ref = _firestore.collection("iuran").doc();
 
       batch.set(ref, {
         "wargaId": warga.id,
@@ -73,7 +73,7 @@ class TagihanService {
     await batch.commit();
   }
 
-  Future<void> generateTagihanSetahun(int tahun) async {
+  Future<void> generateIuranSetahun(int tahun) async {
     final bulanList = [
       "Januari",
       "Februari",
@@ -91,30 +91,30 @@ class TagihanService {
 
     for (var bulan in bulanList) {
       try {
-        await generateTagihan(bulan, tahun);
+        await generateIuran(bulan, tahun);
       } catch (_) {
         // jika sudah ada, skip
       }
     }
   }
 
-  /// Memproses pembayaran tagihan.
+  /// Memproses pembayaran iuran.
   /// Menggunakan Firestore transaction untuk memastikan atomisitas operasi,
   /// dan menulis ke koleksi 'transaksi'.
-  Future<void> bayar(String tagihanId) async {
-    _log('Memulai proses pembayaran untuk tagihan ID: $tagihanId');
+  Future<void> bayar(String iuranId) async {
+    _log('Memulai proses pembayaran untuk iuran ID: $iuranId');
     try {
       await _firestore.runTransaction((transaction) async {
-        final tagihanRef = _firestore.collection("tagihan").doc(tagihanId);
-        final tagihanSnapshot = await transaction.get(tagihanRef);
+        final iuranRef = _firestore.collection("iuran").doc(iuranId);
+        final iuranSnapshot = await transaction.get(iuranRef);
 
-        if (!tagihanSnapshot.exists) {
-          throw Exception("Tagihan dengan ID $tagihanId tidak ditemukan.");
+        if (!iuranSnapshot.exists) {
+          throw Exception("Iuran dengan ID $iuranId tidak ditemukan.");
         }
 
-        final data = tagihanSnapshot.data()!;
+        final data = iuranSnapshot.data()!;
         if (data["status"] == "lunas") {
-          throw Exception("Tagihan sudah lunas.");
+          throw Exception("Iuran sudah lunas.");
         }
 
         final wargaRef = _firestore.collection("warga").doc(data["wargaId"]);
@@ -123,7 +123,7 @@ class TagihanService {
         final String namaWarga = wargaData?['nama'] ?? 'Warga Tidak Diketahui';
         final String rumahWarga = wargaData?['rumah'] ?? '-';
         final String dariKeterangan = '$namaWarga (Rumah $rumahWarga)';
-        final role = await SessionService.getRole();
+        final role = SessionService.getRole();
         //final namaUser = user?["user"] ?? "Unknown";
         final transaksiRef = _firestore.collection("transaksi").doc();
         transaction.set(transaksiRef, {
@@ -131,35 +131,35 @@ class TagihanService {
           "jenis": "masuk",
           "sumberPemasukan": "iuran",
           "wargaId": data["wargaId"],
-          "bulanTagihan": data["bulan"],
-          "tahunTagihan": data["tahun"],
+          "bulanIuran": data["bulan"],
+          "tahunIuran": data["tahun"],
           "jumlah": data["jumlah"],
           "dari": dariKeterangan,
           "penerima": role, // Ambil dari session user yang login
           "keterangan":
-              "Pembayaran iuran bulan ${data["bulan"]} untuk ID Tagihan: $tagihanId",
+              "Pembayaran iuran bulan ${data["bulan"]} untuk ID Iuran: $iuranId",
           "statusBendahara": "menunggu", // Status awal saat dimasukkan
-          "referensiId": tagihanId, // Opsional: referensi ke tagihan aslinya
+          "referensiId": iuranId, // Opsional: referensi ke iuran aslinya
           "createdAt": FieldValue.serverTimestamp(),
           "updatedAt": FieldValue.serverTimestamp(),
         });
 
-        // Update status tagihan menjadi lunas
-        transaction.update(tagihanRef, {
+        // Update status iuran menjadi lunas
+        transaction.update(iuranRef, {
           "status": "lunas",
           "updatedAt": FieldValue.serverTimestamp(),
           "tanggalBayar": FieldValue.serverTimestamp(),
         });
       });
-      _log('Pembayaran tagihan ID: $tagihanId berhasil.');
+      _log('Pembayaran iuran ID: $iuranId berhasil.');
       await LogService().logEvent(
         action: 'pembayaran_iuran',
-        target: 'tagihan',
-        detail: 'Pembayaran berhasil untuk tagihanId=$tagihanId',
+        target: 'iuran',
+        detail: 'Pembayaran berhasil untuk iuranId=$iuranId',
       );
     } catch (e, st) {
       _log(
-        'Gagal memproses pembayaran untuk tagihan ID: $tagihanId: $e',
+        'Gagal memproses pembayaran untuk iuran ID: $iuranId: $e',
         error: e,
         stackTrace: st,
       );

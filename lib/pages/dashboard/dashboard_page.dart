@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import '../../routes/app_routes.dart';
 import '../../services/session_service.dart';
 import '../../services/dashboard_service.dart';
-import '../../services/tagihan_service.dart';
+import '../../services/iuran_service.dart';
 import '../../widgets/dashboard/dashboard_stat.dart';
-import '../../utils/list_waktu_tagihan_util.dart';
+import '../../utils/list_waktu_iuran_util.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -94,19 +94,19 @@ class DashboardPage extends StatelessWidget {
   }
 
   /// =========================
-  /// GENERATE TAGIHAN
+  /// GENERATE IURAN
   /// =========================
-  Future<void> generateTagihanDialog(BuildContext context) async {
+  Future<void> generateIuranDialog(BuildContext context) async {
     String? selectedBulan;
     int selectedTahun = DateTime.now().year;
-    final waktuUtil = ListWaktuTagihan();
+    final waktuUtil = ListWaktuIuran();
     final result = await showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text("Generate Tagihan"),
+              title: const Text("Generate Iuran"),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -163,13 +163,13 @@ class DashboardPage extends StatelessWidget {
 
     if (result == null) return;
 
-    await TagihanService().generateTagihan(result["bulan"], result["tahun"]);
+    await IuranService().generateIuran(result["bulan"], result["tahun"]);
 
     if (!context.mounted) return;
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text("Tagihan berhasil dibuat")));
+    ).showSnackBar(const SnackBar(content: Text("Iuran berhasil dibuat")));
   }
 
   /// =========================
@@ -178,14 +178,14 @@ class DashboardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dashboardService = DashboardService();
-    Future<void> generateTagihanSetahunDialog(BuildContext context) async {
+    Future<void> generateIuranSetahunDialog(BuildContext context) async {
       int selectedTahun = DateTime.now().year;
 
       final tahun = await showDialog<int>(
         context: context,
         builder: (context) {
           return AlertDialog(
-            title: const Text("Generate Tagihan 1 Tahun"),
+            title: const Text("Generate Iuran 1 Tahun"),
             content: DropdownButtonFormField<int>(
               initialValue: selectedTahun,
               items: List.generate(5, (i) {
@@ -215,12 +215,12 @@ class DashboardPage extends StatelessWidget {
 
       if (tahun == null) return;
 
-      await TagihanService().generateTagihanSetahun(tahun);
+      await IuranService().generateIuranSetahun(tahun);
 
       if (!context.mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Tagihan 1 tahun ($tahun) berhasil dibuat")),
+        SnackBar(content: Text("Iuran 1 tahun ($tahun) berhasil dibuat")),
       );
     }
 
@@ -231,11 +231,11 @@ class DashboardPage extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.calendar_month),
             tooltip: "Generate 1 Tahun",
-            onPressed: () => generateTagihanSetahunDialog(context),
+            onPressed: () => generateIuranSetahunDialog(context),
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => generateTagihanDialog(context),
+            onPressed: () => generateIuranDialog(context),
           ),
           IconButton(
             icon: const Icon(Icons.logout),

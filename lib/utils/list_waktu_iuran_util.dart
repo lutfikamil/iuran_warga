@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
-class ListWaktuTagihan {
+class ListWaktuIuran {
   final List<String> bulanList = const [
     "Januari",
     "Februari",
@@ -33,7 +33,7 @@ class ListWaktuTagihan {
     for (var doc in docs) {
       final data = doc.data() as Map<String, dynamic>;
 
-      final tahun = data["tahunTagihan"];
+      final tahun = data["tahunIuran"];
 
       if (tahun != null) {
         tahunSet.add(tahun);
@@ -58,8 +58,8 @@ class ListWaktuTagihan {
     for (var doc in docs) {
       final data = doc.data() as Map<String, dynamic>;
 
-      final bulan = data["bulanTagihan"];
-      final tahun = data["tahunTagihan"];
+      final bulan = data["bulanIuran"];
+      final tahun = data["tahunIuran"];
       final jumlah = data["jumlah"] ?? 0;
 
       if (bulan != null && tahun != null) {

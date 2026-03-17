@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../services/tagihan_service.dart';
+import '../../services/iuran_service.dart';
 
 class PembayaranPage extends StatefulWidget {
   const PembayaranPage({super.key});
@@ -69,14 +69,14 @@ class _PembayaranPageState extends State<PembayaranPage> {
   /// DATA ROW TABLE
   TableRow _buildDataRow(
     int index,
-    Map<String, dynamic> tagihanData,
+    Map<String, dynamic> iuranData,
     Map<String, dynamic> wargaData,
-    String tagihanId,
+    String iuranId,
   ) {
-    final status = tagihanData["status"];
+    final status = iuranData["status"];
     final namaWarga = wargaData["nama"] ?? '-';
-    final bulanTagihan = tagihanData["bulan"] ?? '-';
-    final jumlahTagihan = tagihanData["jumlah"] ?? '0';
+    final bulanIuran = iuranData["bulan"] ?? '-';
+    final jumlahIuran = iuranData["jumlah"] ?? '0';
 
     return TableRow(
       decoration: BoxDecoration(
@@ -89,8 +89,8 @@ class _PembayaranPageState extends State<PembayaranPage> {
           child: Text(wargaData["rumah"] ?? '-'),
         ),
         Padding(padding: _defaultPadding, child: Text(namaWarga)),
-        Padding(padding: _defaultPadding, child: Text(bulanTagihan)),
-        Padding(padding: _defaultPadding, child: Text("Rp $jumlahTagihan")),
+        Padding(padding: _defaultPadding, child: Text(bulanIuran)),
+        Padding(padding: _defaultPadding, child: Text("Rp $jumlahIuran")),
         Padding(
           padding: _defaultPadding,
           child: status == "lunas"
@@ -109,7 +109,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
                         return AlertDialog(
                           title: const Text('Konfirmasi Pembayaran'),
                           content: Text(
-                            'Anda yakin ingin menandai tagihan bulan "$bulanTagihan" untuk "$namaWarga" sebesar Rp $jumlahTagihan sebagai lunas?',
+                            'Anda yakin ingin menandai iuran bulan "$bulanIuran" untuk "$namaWarga" sebesar Rp $jumlahIuran sebagai lunas?',
                           ),
                           actions: <Widget>[
                             TextButton(
@@ -131,7 +131,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
                     // Jika user menekan 'Ya, Bayar'
                     if (confirm == true) {
                       try {
-                        await TagihanService().bayar(tagihanId);
+                        await IuranService().bayar(iuranId);
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -161,17 +161,15 @@ class _PembayaranPageState extends State<PembayaranPage> {
     return Scaffold(
       appBar: AppBar(title: const Text("Pembayaran Iuran")),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection("tagihan").snapshots(),
-        builder: (context, tagihanSnap) {
-          if (tagihanSnap.hasError) {
-            return Center(
-              child: Text('Terjadi kesalahan: ${tagihanSnap.error}'),
-            );
+        stream: FirebaseFirestore.instance.collection("iuran").snapshots(),
+        builder: (context, iuranSnap) {
+          if (iuranSnap.hasError) {
+            return Center(child: Text('Terjadi kesalahan: ${iuranSnap.error}'));
           }
-          if (!tagihanSnap.hasData) {
+          if (!iuranSnap.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          final tagihanDocs = tagihanSnap.data!.docs;
+          final iuranDocs = iuranSnap.data!.docs;
 
           return StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance.collection("warga").snapshots(),
@@ -189,8 +187,8 @@ class _PembayaranPageState extends State<PembayaranPage> {
                 for (var doc in wargaDocs)
                   doc.id: doc.data() as Map<String, dynamic>,
               };
-              if (tagihanDocs.isEmpty) {
-                return const Center(child: Text('Tidak ada data tagihan.'));
+              if (iuranDocs.isEmpty) {
+                return const Center(child: Text('Tidak ada data iuran.'));
               }
 
               return Padding(
@@ -219,13 +217,13 @@ class _PembayaranPageState extends State<PembayaranPage> {
                           },
                           children: [
                             _buildHeaderRow(),
-                            ...List.generate(tagihanDocs.length, (index) {
-                              final tagihanDoc = tagihanDocs[index];
-                              final tagihanData =
-                                  tagihanDoc.data() as Map<String, dynamic>;
-                              final tagihanId = tagihanDoc.id;
+                            ...List.generate(iuranDocs.length, (index) {
+                              final iuranDoc = iuranDocs[index];
+                              final iuranData =
+                                  iuranDoc.data() as Map<String, dynamic>;
+                              final iuranId = iuranDoc.id;
 
-                              final String? wargaId = tagihanData["wargaId"];
+                              final String? wargaId = iuranData["wargaId"];
                               if (wargaId == null ||
                                   !wargaMap.containsKey(wargaId)) {
                                 return const TableRow(
@@ -272,9 +270,9 @@ class _PembayaranPageState extends State<PembayaranPage> {
                                   wargaMap[wargaId]!;
                               return _buildDataRow(
                                 index,
-                                tagihanData,
+                                iuranData,
                                 wargaData,
-                                tagihanId,
+                                iuranId,
                               );
                             }),
                           ],

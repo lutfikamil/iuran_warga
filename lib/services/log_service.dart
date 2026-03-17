@@ -12,7 +12,7 @@ class LogService {
     required String target,
     required String detail,
   }) async {
-    final role = await SessionService.getRole();
+    final role =  SessionService.getRole();
 
     await _firestore.collection('logs').add({
       'action': action,

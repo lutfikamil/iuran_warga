@@ -65,14 +65,14 @@ class _PemasukanPageState extends State<PemasukanPage> {
       await PemasukanService().deletePemasukan(id);
       if (!mounted) {
         return;
-      }
+      }if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Pemasukan umum berhasil dihapus!')),
       );
     } catch (e) {
       if (!mounted) {
         return;
-      }
+      }if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Gagal menghapus pemasukan umum: $e')),
       );

@@ -3,13 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'add_warga_page.dart';
 import '../../services/log_service.dart';
-import '../../utils/list_waktu_tagihan_util.dart';
+import '../../utils/list_waktu_iuran_util.dart';
 
 class DetailWargaPage extends StatelessWidget {
   final String wargaId;
 
   DetailWargaPage({super.key, required this.wargaId});
-  final waktuUtil = ListWaktuTagihan();
+  final waktuUtil = ListWaktuIuran();
   Future<void> _deleteWarga(BuildContext context) async {
     final confirm = await showDialog(
       context: context,
@@ -40,9 +40,11 @@ class DetailWargaPage extends StatelessWidget {
         target: 'warga',
         detail: 'Hapus data warga id=$wargaId',
       );
-
-      Navigator.pop(context);
-
+     if (!context.mounted) return;
+      {
+        Navigator.pop(context);
+        if (!context.mounted) return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Data warga berhasil dihapus")),
       );

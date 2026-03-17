@@ -24,9 +24,9 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadSessionInfo() async {
-    final role = await SessionService.getRole();
-    final identifier = await SessionService.getIdentifier();
-    final isAdmin = await SessionService.isAdminLogin();
+    final role =  SessionService.getRole();
+    final identifier =  SessionService.getIdentifier();
+    final isAdmin =  SessionService.isAdminLogin();
 
     if (!mounted) return;
 

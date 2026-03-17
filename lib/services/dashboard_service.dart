@@ -22,7 +22,7 @@ class DashboardService {
         .collection("transaksi")
         .where("jenis", isEqualTo: "masuk")
         .where("sumberPemasukan", isEqualTo: "iuran")
-        .where("bulanTagihan", isEqualTo: bulan)
+        .where("bulanIuran", isEqualTo: bulan)
         .count()
         .get();
 
@@ -82,7 +82,7 @@ class DashboardService {
     final now = Timestamp.fromDate(DateTime.now());
 
     final snap = await _db
-        .collection("tagihan")
+        .collection("iuran")
         .where("status", isEqualTo: "belum")
         .where("jatuhTempo", isLessThan: now)
         .get();
@@ -94,7 +94,7 @@ class DashboardService {
     final now = Timestamp.fromDate(DateTime.now());
 
     final snap = await _db
-        .collection("tagihan")
+        .collection("iuran")
         .where("status", isEqualTo: "belum")
         .where("jatuhTempo", isLessThan: now)
         .get();

@@ -1,5 +1,3 @@
-// services/export_import_service.dart
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -13,8 +11,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:universal_html/html.dart' as html;
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
-
-import '../models/warga_model.dart';
+import 'users_service.dart';
 import 'auth_service.dart';
 
 class ExportImportService {
@@ -58,13 +55,16 @@ class ExportImportService {
     html.Url.revokeObjectUrl(url); // Membersihkan URL objek
   }
 
-  // --- Fungsi Export Excel (sudah ada, tambahkan Tanggal Bergabung) ---
+  // ==============================================
+  //        DOWNLOAD / EXPORT WARGA KE EXCEL
+  // ==============================================
   static Future<void> exportWargaToExcel(
     BuildContext context,
     List<DocumentSnapshot> wargaDocs,
   ) async {
     try {
       if (wargaDocs.isEmpty) {
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Tidak ada data warga untuk diekspor.')),
         );
@@ -72,101 +72,103 @@ class ExportImportService {
       }
 
       final excel = Excel.createExcel();
-      final Sheet sheet = excel['Data Warga'];
 
-      // Menulis Header
+      // 🔥 hapus default sheet dengan aman
+      final defaultSheet = excel.getDefaultSheet();
+      if (defaultSheet != null) {
+        excel.delete(defaultSheet);
+      }
+
+      final sheet = excel['Data Warga'];
+
+      // Header
       sheet.appendRow([
         TextCellValue('No'),
         TextCellValue('Nama'),
         TextCellValue('Rumah'),
         TextCellValue('HP'),
         TextCellValue('Status'),
-        TextCellValue('Role'), // Tambahkan Role
-        TextCellValue('Tanggal Bergabung'), // Tambahkan Tanggal Bergabung
+        TextCellValue('Role'),
+        TextCellValue('Tanggal Bergabung'),
       ]);
 
-      // Menulis Data
+      // Data
       for (int i = 0; i < wargaDocs.length; i++) {
-        final wargaData = wargaDocs[i].data() as Map<String, dynamic>;
-        final nama = wargaData["nama"] ?? '-';
-        final rumah = wargaData["rumah"] ?? '-';
-        final hp = wargaData["hp"] ?? '-';
-        final status = wargaData["status"] ?? '-';
-        final role = wargaData["role"] ?? 'warga'; // Ambil role
-        final tanggalBergabung =
-            wargaData["tanggalBergabung"] ?? '-'; // Ambil tanggal
+        final data = wargaDocs[i].data() as Map<String, dynamic>;
 
         sheet.appendRow([
           TextCellValue((i + 1).toString()),
-          TextCellValue(nama),
-          TextCellValue(rumah),
-          TextCellValue(hp),
-          TextCellValue(status),
-          TextCellValue(role),
-          TextCellValue(tanggalBergabung),
+          TextCellValue(data["nama"] ?? '-'),
+          TextCellValue(data["rumah"] ?? '-'),
+          TextCellValue(data["hp"] ?? '-'),
+          TextCellValue(data["status"] ?? '-'),
+          TextCellValue(data["role"] ?? 'warga'),
+          TextCellValue(data["tanggalBergabung"] ?? '-'),
         ]);
       }
 
-      List<int>? excelBytes = excel.encode();
+      final excelBytes = excel.encode();
       if (excelBytes == null) {
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal mengkodekan data Excel.')),
+          const SnackBar(content: Text('Gagal mengkodekan Excel')),
         );
         return;
       }
 
-      final String fileName =
-          'data_warga_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx'; // Format tanggal lebih baik
+      final fileName =
+          'data_warga_${DateFormat('ddMMyyyy_HHmmss').format(DateTime.now())}.xlsx';
 
       if (kIsWeb) {
-        // --- Logika untuk Web ---
         _downloadFileWeb(
           excelBytes,
           fileName,
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         );
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Data Excel telah diunduh!')),
-        );
+
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Excel berhasil diunduh')));
       } else {
-        // --- Logika untuk Android/iOS (Native) ---
-        final Directory? tempDir = await getTemporaryDirectory();
-        if (tempDir == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Tidak dapat mengakses direktori penyimpanan.'),
-            ),
-          );
-          return;
-        }
-        final String path = tempDir.path;
-        final File file = File('$path/$fileName');
+        File? file;
 
         try {
+          final tempDir = await getTemporaryDirectory();
+          file = File('${tempDir.path}/$fileName');
+
           await file.writeAsBytes(excelBytes);
+
           await Share.shareXFiles([XFile(file.path)], text: 'Data Warga');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Data Excel siap dibagikan!')),
-          );
-          await file.delete();
+
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Excel siap dibagikan')));
         } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Gagal mengekspor dan membagikan Excel: $e'),
-            ),
-          );
-          debugPrint('Export Excel Error (Native): $e');
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Gagal export Excel: $e')));
+        } finally {
+          if (file != null && await file.exists()) {
+            await file.delete();
+          }
         }
       }
     } catch (e, st) {
+      debugPrint('Export Excel Error: $e \n $st');
+
+      if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Gagal mengekspor data: $e')));
-      debugPrint('Export Excel Error (General): $e \n $st');
+      ).showSnackBar(SnackBar(content: Text('Gagal export: $e')));
     }
   }
 
-  // --- Fungsi Export PDF (sudah ada) ---
+  // ==============================================
+  //        DOWNLOAD / EXPORT WARGA KE PDF
+  // ==============================================
   static Future<void> exportWargaToPdf(
     BuildContext context,
     List<DocumentSnapshot> wargaDocs,
@@ -195,7 +197,7 @@ class ExportImportService {
         wargaData["rumah"] ?? '-',
         wargaData["hp"] ?? '-',
         wargaData["status"] ?? '-',
-        wargaData["role"] ?? 'warga', // Ambil role
+        wargaData["role"] ?? 'warga',
       ]);
     }
 
@@ -215,7 +217,7 @@ class ExportImportService {
               ),
             ),
             pw.SizedBox(height: 20),
-            pw.Table.fromTextArray(
+            pw.TableHelper.fromTextArray(
               headers: tableData[0],
               data: tableData.sublist(1),
               border: pw.TableBorder.all(),
@@ -237,47 +239,47 @@ class ExportImportService {
 
     final pdfBytes = await pdf.save();
     final String fileName =
-        'data_warga_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf'; // Format tanggal lebih baik
+        'data_warga_${DateFormat('ddMMyyyy_HHmmss').format(DateTime.now())}.pdf';
 
     if (kIsWeb) {
       // --- Logika untuk Web ---
       _downloadFileWeb(pdfBytes, fileName, 'application/pdf');
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Laporan PDF telah diunduh!')),
       );
     } else {
-      // --- Logika untuk Android/iOS (Native) ---
-      final Directory? tempDir = await getTemporaryDirectory();
-      if (tempDir == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tidak dapat mengakses direktori penyimpanan.'),
-          ),
-        );
-        return;
-      }
-      final String path = tempDir.path;
-      final File file = File('$path/$fileName');
+      File? file;
 
       try {
+        final tempDir = await getTemporaryDirectory();
+        file = File('${tempDir.path}/$fileName');
+
         await file.writeAsBytes(pdfBytes);
+
         await Share.shareXFiles([XFile(file.path)], text: 'Laporan Data Warga');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Laporan PDF siap dibagikan!')),
-        );
-        await file.delete();
+
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('PDF siap dibagikan')));
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal mengekspor dan membagikan PDF: $e')),
-        );
-        debugPrint('Export PDF Error (Native): $e');
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal export PDF: $e')));
+      } finally {
+        if (file != null && await file.exists()) {
+          await file.delete();
+        }
       }
     }
   }
 
-  // --- FUNGSI importWargaFromExcel yang direfactor ---
+  // ==============================================
+  //           IMPORT WARGA DARI EXCEL
+  // ==============================================
   static Future<void> importWargaFromExcel(BuildContext context) async {
-    // Memberikan feedback loading ke user
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Memulai import data...'),
@@ -289,35 +291,52 @@ class ExportImportService {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['xlsx'],
+        withData: true, // 🔥 penting untuk web
       );
 
-      if (result == null || result.files.single.path == null) {
+      if (result == null || result.files.single.bytes == null) {
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Pemilihan file dibatalkan.')),
         );
         return;
       }
+      final existingWargaSnapshot = await _db.collection('warga').get();
 
-      File file = File(result.files.single.path!);
-      var bytes = file.readAsBytesSync();
-      var excel = Excel.decodeBytes(bytes);
+      Map<String, DocumentReference> rumahMap = {};
+
+      for (var doc in existingWargaSnapshot.docs) {
+        final data = doc.data();
+        final rumah = (data['rumah'] ?? '').toString().toUpperCase();
+
+        if (rumah.isNotEmpty) {
+          rumahMap[rumah] = doc.reference;
+        }
+      }
+      // ✅ Ambil bytes (support semua platform)
+      final bytes = result.files.single.bytes!;
+      final excel = Excel.decodeBytes(bytes);
 
       int importedCount = 0;
-      List<String> failedRows = []; // Untuk mencatat baris yang gagal
-      WriteBatch batch = _db.batch(); // Inisialisasi batch
+      List<String> failedRows = [];
 
-      // Asumsi sheet pertama yang digunakan
+      WriteBatch batch = _db.batch();
+
+      // 🔥 Simpan data untuk create user setelah batch commit
+      List<Map<String, dynamic>> importedUsers = [];
+
       for (var table in excel.tables.keys) {
         var sheet = excel.tables[table];
         if (sheet == null || sheet.maxRows == 0) continue;
 
         for (int i = 1; i < sheet.maxRows; i++) {
           var row = sheet.row(i);
+
+          // Skip baris kosong
           if (row.every(
             (cell) =>
                 cell == null ||
-                // ignore: invalid_null_aware_operator
-                cell?.value == null ||
+                cell.value == null ||
                 cell.value.toString().trim().isEmpty,
           )) {
             continue;
@@ -328,102 +347,141 @@ class ExportImportService {
             String rumah = row[2]?.value?.toString().trim() ?? '';
             String hp = row[3]?.value?.toString().trim() ?? '';
             String status = row[4]?.value?.toString().trim() ?? '';
-            String roleString = row[5]?.value?.toString().trim() ?? 'warga';
-            String tanggalBergabungString =
-                row[6]?.value?.toString().trim() ?? '';
+            String roleString =
+                row[5]?.value?.toString().trim().toLowerCase() ?? 'warga';
+            String tanggalBergabung = row[6]?.value?.toString().trim() ?? '';
 
-            // --- Validasi Data ---
+            // ✅ Validasi
             if (nama.isEmpty || rumah.isEmpty) {
-              failedRows.add('Baris ${i + 1}: Nama atau No. Rumah kosong.');
+              failedRows.add('Baris ${i + 1}: Nama atau Rumah kosong.');
               continue;
             }
+
             if (hp.isNotEmpty && !RegExp(r'^[0-9+() -]+$').hasMatch(hp)) {
-              failedRows.add('Baris ${i + 1}: Format No. HP tidak valid.');
+              failedRows.add('Baris ${i + 1}: Format HP tidak valid.');
               continue;
             }
 
-            // Konversi role string ke enum UserRole
-            UserRole userRole;
-            try {
-              userRole = UserRole.values.firstWhere(
-                (e) => e.toString().split('.').last == roleString.toLowerCase(),
-                orElse: () => UserRole
-                    .warga, // Default ke 'warga' jika role tidak dikenali
-              );
-            } catch (e) {
-              failedRows.add(
-                'Baris ${i + 1}: Role "$roleString" tidak valid, diatur sebagai "warga".',
-              );
-              userRole = UserRole.warga;
-            }
-
-            // Optional: Konversi tanggal jika formatnya konsisten
-            // DateTime? tanggalBergabung;
-            // if (tanggalBergabungString.isNotEmpty) {
-            // try {
-            // tanggalBergabung = DateTime.parse(tanggalBergabungString); // Sesuaikan format jika perlu
-            // } catch (e) {
-            // failedRows.add('Baris ${i + 1}: Format tanggal bergabung tidak valid.');
-            // // Biarkan null atau default
-            // }
-            // }
-
-            // Buat objek WargaModel
-            WargaModel newWarga = WargaModel(
-              id: '', // ID akan digenerate oleh Firestore
-              nama: nama,
-              rumah: rumah,
-              hp: hp,
-              status: status,
-              role: userRole
-                  .toString()
-                  .split('.')
-                  .last, // Simpan sebagai string
-              tanggalBergabung:
-                  tanggalBergabungString, // Simpan tanggal sebagai string
+            // ✅ Role parsing
+            UserRole userRole = UserRole.values.firstWhere(
+              (e) => e.toString().split('.').last == roleString,
+              orElse: () => UserRole.warga,
             );
 
-            // Tambahkan operasi ke batch
-            batch.set(_db.collection('warga').doc(), newWarga.toMap());
+            // 🔥 Buat doc ref dulu biar dapat ID
+            final rumahUpper = rumah.toUpperCase();
+            final wargaData = {
+              'nama': nama,
+              'rumah': rumahUpper,
+              'hp': hp,
+              'status': status,
+              'role': userRole.toString().split('.').last,
+              'tanggalBergabung': tanggalBergabung,
+              'updatedAt': FieldValue.serverTimestamp(),
+            };
+
+            if (rumahMap.containsKey(rumahUpper)) {
+              // 🔥 UPDATE
+              final existingRef = rumahMap[rumahUpper]!;
+
+              batch.update(existingRef, wargaData);
+
+              importedUsers.add({
+                'wargaId': existingRef.id,
+                'nama': nama,
+                'rumah': rumahUpper,
+                'hp': hp,
+                'role': userRole.toString().split('.').last,
+              });
+            } else {
+              // 🔥 CREATE
+              final newRef = _db.collection('warga').doc();
+
+              batch.set(newRef, {
+                ...wargaData,
+                'createdAt': FieldValue.serverTimestamp(),
+              });
+
+              rumahMap[rumahUpper] = newRef;
+
+              importedUsers.add({
+                'wargaId': newRef.id,
+                'nama': nama,
+                'rumah': rumahUpper,
+                'hp': hp,
+                'role': userRole.toString().split('.').last,
+              });
+            }
+
             importedCount++;
           } catch (e, st) {
-            failedRows.add('Baris ${i + 1}: Error tidak terduga ($e).');
-            debugPrint('Error processing row ${i + 1}: $e \n $st');
+            failedRows.add('Baris ${i + 1}: Error ($e)');
+            debugPrint('Row error ${i + 1}: $e \n $st');
           }
         }
-        break; // Proses hanya sheet pertama, hapus ini untuk proses semua sheet
+        break; // hanya sheet pertama
       }
 
-      await batch.commit(); // Eksekusi semua operasi batch
+      // ✅ Commit semua warga dulu
+      await batch.commit();
 
-      String message = 'Berhasil mengimpor $importedCount data warga.';
+      // =========================================
+      // 🔥 CREATE USER LOGIN (SETELAH WARGA MASUK)
+      // =========================================
+      for (var user in importedUsers) {
+        try {
+          final identifier =
+              (user['hp'] != null && user['hp'].toString().isNotEmpty)
+              ? user['hp']
+              : user['rumah'];
+
+          await upsertUserLogin(
+            wargaId: user['wargaId'],
+            nama: user['nama'],
+            rumah: user['rumah'],
+            hp: user['hp'],
+            role: user['role'],
+            identifier: identifier,
+            newRawPassword: '123456', // 🔥 default password
+          );
+        } catch (e) {
+          debugPrint('User create error: $e');
+        }
+      }
+
+      // =========================================
+      // 🔔 NOTIFIKASI
+      // =========================================
+      String message = 'Berhasil mengimpor $importedCount warga.';
+
       if (failedRows.isNotEmpty) {
-        message += '\n${failedRows.length} baris gagal diimpor:';
+        message += '\n${failedRows.length} baris gagal:';
         for (int i = 0; i < failedRows.length && i < 3; i++) {
-          // Tampilkan max 3 error detail
           message += '\n- ${failedRows[i]}';
         }
-        if (failedRows.length > 3)
+        if (failedRows.length > 3) {
           message += '\n...dan ${failedRows.length - 3} lainnya.';
+        }
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
-            duration: const Duration(
-              seconds: 10,
-            ), // Durasi lebih lama untuk error
+            duration: const Duration(seconds: 10),
             backgroundColor: Colors.orange,
           ),
         );
       } else {
+        if (!context.mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(message)));
       }
     } catch (e, st) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal mengimpor data dari Excel: $e')),
-      );
-      debugPrint('Import Excel Error (Main): $e \n $st');
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal import Excel: $e')));
+      debugPrint('Import Excel Error: $e \n $st');
     }
   }
 }
