@@ -6,7 +6,8 @@ import 'detail_warga_page.dart';
 import '../../services/export_import_service.dart';
 import '../../services/session_service.dart';
 import '../../models/warga_model.dart';
-import 'generate_page.dart';
+import 'generate_iuran_page.dart';
+import '../../utils/bulan_util.dart';
 
 class WargaPage extends StatefulWidget {
   const WargaPage({super.key});
@@ -32,25 +33,6 @@ class _WargaPageState extends State<WargaPage> {
     setState(() {
       _isWarga = role == 'warga';
     });
-  }
-
-  int _hitungTunggakan(Map<String, dynamic>? pembayaran) {
-    final now = DateTime.now();
-    final bulanTerakhirTunggakan = now.month - 1;
-
-    if (bulanTerakhirTunggakan <= 0) return 0;
-    if (pembayaran == null) return bulanTerakhirTunggakan;
-
-    int tunggakan = 0;
-
-    for (int i = 1; i <= bulanTerakhirTunggakan; i++) {
-      final isPaid = pembayaran[i.toString()] == true;
-      if (!isPaid) {
-        tunggakan++;
-      }
-    }
-
-    return tunggakan;
   }
 
   @override
@@ -192,132 +174,209 @@ class _WargaPageState extends State<WargaPage> {
         ),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection("warga").snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            _allWargaDocs = [];
-            return Center(
-              child: Text(
-                'Terjadi kesalahan: ${snapshot.error}',
-                style: const TextStyle(color: Colors.red),
-              ),
-            );
+        stream: FirebaseFirestore.instance
+            .collection("warga")
+            .orderBy("rumah")
+            .snapshots(),
+        builder: (context, wargaSnapshot) {
+          if (wargaSnapshot.hasError) {
+            return Center(child: Text('Error: ${wargaSnapshot.error}'));
           }
 
-          if (!snapshot.hasData) {
-            _allWargaDocs = [];
+          if (!wargaSnapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          _allWargaDocs = snapshot.data!.docs;
+          _allWargaDocs = wargaSnapshot.data!.docs;
 
-          List<DocumentSnapshot> filteredWargaDocs = _allWargaDocs.where((doc) {
-            final wargaData = doc.data() as Map<String, dynamic>;
-            final nama = wargaData["nama"]?.toLowerCase() ?? '';
-            final rumah = wargaData["rumah"]?.toLowerCase() ?? '';
-            final hp = wargaData["hp"]?.toLowerCase() ?? '';
-            final status = wargaData["status"]?.toLowerCase() ?? '';
-            return nama.contains(_searchQuery) ||
-                rumah.contains(_searchQuery) ||
-                hp.contains(_searchQuery) ||
-                status.contains(_searchQuery);
-          }).toList();
+          return StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection("iuran").snapshots(),
+            builder: (context, iuranSnapshot) {
+              if (iuranSnapshot.hasError) {
+                return Center(child: Text('Error: ${iuranSnapshot.error}'));
+              }
 
-          if (filteredWargaDocs.isEmpty) {
-            return Center(
-              child: Text(
-                _searchQuery.isEmpty
-                    ? 'Tidak ada data warga saat ini.'
-                    : 'Tidak ada warga yang cocok dengan "$_searchQuery".',
-              ),
-            );
-          }
+              if (!iuranSnapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          return SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Table(
-                border: TableBorder.all(color: Colors.grey.shade300),
-                columnWidths: const {
-                  0: FixedColumnWidth(50), // No
-                  1: FixedColumnWidth(150), // Nama
-                  2: FixedColumnWidth(80), // Rumah
-                  3: FixedColumnWidth(120), // HP
-                  4: FixedColumnWidth(100), // Status
-                  5: FixedColumnWidth(100), // Tunggakan
-                },
-                children: [
-                  _buildWargaTableRow(
-                    const [
-                      Text("No", textAlign: TextAlign.center),
-                      Text("Nama", textAlign: TextAlign.center),
-                      Text("Rumah", textAlign: TextAlign.center),
-                      Text("HP", textAlign: TextAlign.center),
-                      Text("Status", textAlign: TextAlign.center),
-                      Text("Tunggakan", textAlign: TextAlign.center),
-                    ],
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.primary.withValues(alpha: 0.1),
-                    textStyle: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+              final iuranDocs = iuranSnapshot.data!.docs;
+
+              // FILTER
+              List<DocumentSnapshot> filteredWargaDocs = _allWargaDocs.where((
+                doc,
+              ) {
+                final data = doc.data() as Map<String, dynamic>;
+                final nama = data["nama"]?.toLowerCase() ?? '';
+                final rumah = data["rumah"]?.toLowerCase() ?? '';
+                final hp = data["hp"]?.toLowerCase() ?? '';
+                final status = data["status"]?.toLowerCase() ?? '';
+
+                return nama.contains(_searchQuery) ||
+                    rumah.contains(_searchQuery) ||
+                    hp.contains(_searchQuery) ||
+                    status.contains(_searchQuery);
+              }).toList();
+
+              if (filteredWargaDocs.isEmpty) {
+                return Center(
+                  child: Text(
+                    _searchQuery.isEmpty
+                        ? 'Tidak ada data warga.'
+                        : 'Tidak ditemukan "$_searchQuery"',
                   ),
-                  ...List.generate(filteredWargaDocs.length, (index) {
-                    final wargaDoc = filteredWargaDocs[index];
-                    final warga = WargaModel.fromMap(
-                      wargaDoc.id,
-                      wargaDoc.data() as Map<String, dynamic>,
-                    );
-                    final data = wargaDoc.data() as Map<String, dynamic>;
-                    final pembayaran = data['pembayaran'];
+                );
+              }
 
-                    final jumlahTunggakan = _hitungTunggakan(pembayaran);
-                    return _buildWargaTableRow(
-                      [
-                        Text(
-                          (index + 1).toString(),
-                          textAlign: TextAlign.center,
-                        ),
-                        Text(warga.nama, textAlign: TextAlign.left),
-                        Text(warga.rumah, textAlign: TextAlign.center),
-                        Text(warga.hp, textAlign: TextAlign.left),
-                        Text(warga.status, textAlign: TextAlign.center),
-                        Text(
-                          jumlahTunggakan == 0
-                              ? "Lunas"
-                              : "$jumlahTunggakan bln",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: jumlahTunggakan > 0
-                                ? Colors.red
-                                : Colors.green,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                      backgroundColor: index.isEven
-                          ? Colors.grey.shade50
-                          : Colors.white,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                DetailWargaPage(wargaId: wargaDoc.id),
-                          ),
-                        );
-                      },
-                    );
-                  }),
-                ],
-              ),
-            ),
+              return _buildTable(filteredWargaDocs, iuranDocs);
+            },
           );
         },
       ),
     );
+  }
+
+  Widget _buildTable(
+    List<DocumentSnapshot> wargaDocs,
+    List<QueryDocumentSnapshot> iuranDocs,
+  ) {
+    final tunggakanMap = hitungTunggakanSemuaWarga(iuranDocs);
+    return SingleChildScrollView(
+      scrollDirection: Axis.vertical,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Table(
+          border: TableBorder.all(color: Colors.grey.shade300),
+          columnWidths: const {
+            0: FixedColumnWidth(50),
+            1: FixedColumnWidth(150),
+            2: FixedColumnWidth(80),
+            3: FixedColumnWidth(120),
+            4: FixedColumnWidth(100),
+            5: FixedColumnWidth(100),
+          },
+          children: [
+            _buildHeader(),
+            ...List.generate(wargaDocs.length, (index) {
+              final wargaDoc = wargaDocs[index];
+              final warga = WargaModel.fromMap(
+                wargaDoc.id,
+                wargaDoc.data() as Map<String, dynamic>,
+              );
+
+              final jumlahTunggakan = tunggakanMap[wargaDoc.id] ?? 0;
+
+              final statusText = jumlahTunggakan == 0
+                  ? "Lunas"
+                  : "$jumlahTunggakan bln";
+
+              final statusColor = jumlahTunggakan > 0
+                  ? Colors.red
+                  : Colors.green;
+
+              return _buildWargaTableRow(
+                [
+                  Text("${index + 1}", textAlign: TextAlign.center),
+                  Text(warga.nama),
+                  Text(warga.rumah, textAlign: TextAlign.center),
+                  Text(warga.hp),
+                  Text(warga.status, textAlign: TextAlign.center),
+                  Text(
+                    statusText,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+                backgroundColor: index.isEven
+                    ? Colors.grey.shade50
+                    : Colors.white,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DetailWargaPage(wargaId: wargaDoc.id),
+                    ),
+                  );
+                },
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  TableRow _buildHeader() {
+    return _buildWargaTableRow(
+      const [
+        Text("No", textAlign: TextAlign.center),
+        Text("Nama", textAlign: TextAlign.center),
+        Text("Rumah", textAlign: TextAlign.center),
+        Text("HP", textAlign: TextAlign.center),
+        Text("Status", textAlign: TextAlign.center),
+        Text("Tunggakan", textAlign: TextAlign.center),
+      ],
+      backgroundColor: Colors.blue.withAlpha(1),
+      textStyle: const TextStyle(fontWeight: FontWeight.bold),
+    );
+  }
+
+  Map<String, int> hitungTunggakanSemuaWarga(
+    List<QueryDocumentSnapshot> iuranDocs,
+  ) {
+    final now = DateTime.now();
+    final Map<String, int> result = {};
+
+    for (var doc in iuranDocs) {
+      final data = doc.data() as Map<String, dynamic>;
+
+      final wargaId = data['wargaId'];
+      if (wargaId == null) continue;
+
+      final isTunggakan = BulanUtil.isTunggakan(
+        bulan: data['bulan'],
+        tahun: data['tahun'],
+        now: now,
+      );
+
+      final isBelumLunas = data['status']?.toString().toLowerCase() != 'lunas';
+
+      if (isTunggakan && isBelumLunas) {
+        result[wargaId] = (result[wargaId] ?? 0) + 1;
+      }
+    }
+
+    return result;
+  }
+
+  int hitungTunggakanWarga(
+    List<QueryDocumentSnapshot> iuranDocs,
+    String wargaId,
+  ) {
+    final now = DateTime.now();
+    int total = 0;
+
+    for (var doc in iuranDocs) {
+      final data = doc.data() as Map<String, dynamic>;
+
+      if (data['wargaId'] != wargaId) continue;
+
+      final isTunggakan = BulanUtil.isTunggakan(
+        bulan: data['bulan'],
+        tahun: data['tahun'],
+        now: now,
+      );
+
+      final isBelumLunas = data['status']?.toString().toLowerCase() != 'lunas';
+
+      if (isTunggakan && isBelumLunas) {
+        total++;
+      }
+    }
+
+    return total;
   }
 }

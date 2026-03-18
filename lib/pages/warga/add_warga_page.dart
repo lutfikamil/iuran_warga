@@ -82,62 +82,6 @@ class _AddWargaPageState extends State<AddWargaPage> {
     }
   }
 
-//  Future<void> upsertUserLogin({
-//    required String wargaId,
-//    required String nama,
-//    required String rumah,
-//    required String hp,
-//    required String role,
-//    required String identifier,
-//    String? newRawPassword,
-//  }) async {
-//    final usersRef = FirebaseFirestore.instance.collection('users');
-//    final batch = FirebaseFirestore.instance.batch();
-//
-//    final byWarga = await usersRef
-//        .where('wargaId', isEqualTo: wargaId)
-//        .limit(1)
-//        .get();
-//
-//    DocumentReference userDocRef;
-//    Map<String, dynamic> currentData = {};
-//
-//    if (byWarga.docs.isNotEmpty) {
-//      userDocRef = byWarga.docs.first.reference;
-//      currentData = byWarga.docs.first.data();
-//    } else {
-//      final byIdentifier = await usersRef
-//          .where('identifier', isEqualTo: identifier)
-//          .limit(1)
-//          .get();
-//
-//      if (byIdentifier.docs.isNotEmpty) {
-//        userDocRef = byIdentifier.docs.first.reference;
-//        currentData = byIdentifier.docs.first.data();
-//      } else {
-//        userDocRef = usersRef.doc();
-//      }
-//    }
-//
-//    final passwordHash = (newRawPassword != null && newRawPassword.isNotEmpty)
-//        ? AuthService().hashPassword(newRawPassword)
-//        : (currentData['password'] ?? AuthService().hashPassword('123456'));
-//
-//    batch.set(userDocRef, {
-//      'wargaId': wargaId,
-//      'nama': nama,
-//      'rumah': rumah,
-//      'hp': hp,
-//      'identifier': identifier,
-//      'role': role,
-//      'password': passwordHash,
-//      'updatedAt': FieldValue.serverTimestamp(),
-//      'createdAt': currentData['createdAt'] ?? FieldValue.serverTimestamp(),
-//    }, SetOptions(merge: true));
-//
-//    await batch.commit();
-//  }
-//
   Future<void> _saveWarga() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -147,13 +91,20 @@ class _AddWargaPageState extends State<AddWargaPage> {
 
     try {
       final nama = _namaController.text.trim();
-      final rumah = _rumahController.text.trim();
+      final rumahInput = _rumahController.text.trim();
+      final rumahData = _generateRumahData(rumahInput);
+
+      final rumah = rumahData['rumah']; // sudah uppercase
+      final blok = rumahData['blok'];
+      final nomor = rumahData['nomor'];
       final hp = _hpController.text.trim();
       final identifier = _resolveIdentifier();
 
       final wargaData = <String, dynamic>{
         'nama': nama,
         'rumah': rumah,
+        'blok': blok,
+        'nomor': nomor,
         'hp': hp,
         'status': _selectedStatus,
         'role': _selectedRole,
@@ -245,6 +196,16 @@ class _AddWargaPageState extends State<AddWargaPage> {
     }
   }
 
+  Map<String, dynamic> _generateRumahData(String rumah) {
+    final upper = rumah.toUpperCase();
+
+    final huruf = upper.replaceAll(RegExp(r'[^A-Z]'), '');
+    final angkaStr = upper.replaceAll(RegExp(r'[^0-9]'), '');
+    final angka = int.tryParse(angkaStr) ?? 0;
+    final angkaFormatted = angka.toString().padLeft(2, '0');
+    return {'rumah': '$huruf$angkaFormatted', 'blok': huruf, 'nomor': angka};
+  }
+
   @override
   void dispose() {
     _namaController.dispose();
@@ -287,9 +248,16 @@ class _AddWargaPageState extends State<AddWargaPage> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                  final rumahInput = value?.trim() ?? '';
+
+                  if (rumahInput.isEmpty) {
                     return 'Nomor rumah tidak boleh kosong';
                   }
+
+                  if (!RegExp(r'^[A-Za-z]+\d+$').hasMatch(rumahInput)) {
+                    return 'Format rumah harus seperti A1, B2, dll';
+                  }
+
                   return null;
                 },
               ),
