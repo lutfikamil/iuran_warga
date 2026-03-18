@@ -248,6 +248,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
+                  // ignore: avoid_print
                   print(snapshot.error);
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }

@@ -199,7 +199,7 @@ class DetailWargaPage extends StatelessWidget {
           }
           final uid = FirebaseAuth.instance.currentUser?.uid;
           final wargaSnap = snapshot.data![0];
-          final userSnap = snapshot.data![1];
+          //  final userSnap = snapshot.data![1];
 
           final wargaData = wargaSnap.data() as Map<String, dynamic>?;
           if (wargaData == null) {
