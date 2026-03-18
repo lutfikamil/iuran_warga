@@ -1,29 +1,48 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DashboardService {
+  static int _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is double) return value.round();
+    if (value is num) return value.toInt();
+    return 0;
+  }
+
+  static String _normalizeText(dynamic value) {
+    return value?.toString().trim().toLowerCase() ?? '';
+  }
+
+  static bool _isWargaAktif(Map<String, dynamic> data) {
+    final status = _normalizeText(data['status']);
+
+    if (status.isEmpty) return true;
+
+    return status != 'kosong';
+  }
+
+  static bool _isBelumLunas(Map<String, dynamic> data) {
+    final status = _normalizeText(data['status']);
+    return status.isNotEmpty && status != 'lunas';
+  }
+
   final FirebaseFirestore _db;
 
   DashboardService({FirebaseFirestore? firestore})
     : _db = firestore ?? FirebaseFirestore.instance;
 
   /// =========================
-  /// 1. JUMLAH WARGA MENUNGGAK (UNIK PER ORANG)
+  /// 1. JUMLAH WARGA BELUM BAYAR (UNIK PER ORANG)
   /// =========================
   Future<int> jumlahWargaMenunggak() async {
-    final now = Timestamp.fromDate(DateTime.now());
+    final snap = await _db.collection('iuran').get();
 
-    final snap = await _db
-        .collection("iuran")
-        .where("status", isEqualTo: "belum")
-        .where("jatuhTempo", isLessThan: now)
-        .get();
-
-    // pakai Set supaya tidak double orang
     final Set<String> wargaIds = {};
 
-    for (var doc in snap.docs) {
-      final wargaId = doc["wargaId"];
-      if (wargaId != null) {
+    for (final doc in snap.docs) {
+      final data = doc.data();
+      final wargaId = data['wargaId']?.toString();
+
+      if (wargaId != null && wargaId.isNotEmpty && _isBelumLunas(data)) {
         wargaIds.add(wargaId);
       }
     }
@@ -32,21 +51,18 @@ class DashboardService {
   }
 
   /// =========================
-  /// 2. TOTAL NOMINAL TUNGGAKAN
+  /// 2. TOTAL NOMINAL TUNGGAKAN / BELUM BAYAR
   /// =========================
   Future<int> totalNominalTunggakan() async {
-    final now = Timestamp.fromDate(DateTime.now());
-
-    final snap = await _db
-        .collection("iuran")
-        .where("status", isEqualTo: "belum")
-        .where("jatuhTempo", isLessThan: now)
-        .get();
+    final snap = await _db.collection('iuran').get();
 
     int total = 0;
 
-    for (var doc in snap.docs) {
-      total += (doc["jumlah"] ?? 0) as int;
+    for (final doc in snap.docs) {
+      final data = doc.data();
+      if (_isBelumLunas(data)) {
+        total += _toInt(data['jumlah']);
+      }
     }
 
     return total;
@@ -56,44 +72,35 @@ class DashboardService {
   /// 3. TOTAL WARGA AKTIF
   /// =========================
   Future<int> totalWargaAktif() async {
-    final snap = await _db
-        .collection("warga")
-        .where("status", whereIn: ["Dihuni", "Sewa"])
-        .count()
-        .get();
+    final snap = await _db.collection('warga').get();
 
-    return snap.count ?? 0;
+    return snap.docs.where((doc) => _isWargaAktif(doc.data())).length;
   }
 
   /// =========================
   /// 4. TOTAL SALDO KAS
   /// =========================
   Future<int> totalSaldoKas() async {
-    final pemasukanSnap = await _db
-        .collection("transaksi")
-        .where("jenis", isEqualTo: "masuk")
-        .get();
+    final transaksiSnap = await _db.collection('transaksi').get();
 
-    final pengeluaranSnap = await _db
-        .collection("transaksi")
-        .where("jenis", isEqualTo: "keluar")
-        .get();
+    int total = 0;
 
-    int totalMasuk = 0;
-    int totalKeluar = 0;
+    for (final doc in transaksiSnap.docs) {
+      final data = doc.data();
+      final jumlah = _toInt(data['jumlah']);
+      final jenis = _normalizeText(data['jenis']);
 
-    for (var doc in pemasukanSnap.docs) {
-      totalMasuk += (doc["jumlah"] ?? 0) as int;
+      if (jenis == 'keluar') {
+        total -= jumlah;
+      } else {
+        total += jumlah;
+      }
     }
 
-    for (var doc in pengeluaranSnap.docs) {
-      totalKeluar += (doc["jumlah"] ?? 0) as int;
-    }
-
-    return totalMasuk - totalKeluar;
+    return total;
   }
 
-  /// PRESENSTASE KEPATUHAN WARGA
+  /// PRESENTASE KEPATUHAN WARGA
   Future<double> persentaseKetaatan() async {
     final totalWarga = await totalWargaAktif();
     final wargaNunggak = await jumlahWargaMenunggak();
@@ -113,10 +120,10 @@ class DashboardService {
     final persen = totalWarga == 0 ? 0 : (wargaTaat / totalWarga) * 100;
 
     return {
-      "total": totalWarga,
-      "nunggak": wargaNunggak,
-      "taat": wargaTaat,
-      "persen": persen,
+      'total': totalWarga,
+      'nunggak': wargaNunggak,
+      'taat': wargaTaat,
+      'persen': persen,
     };
   }
 }
