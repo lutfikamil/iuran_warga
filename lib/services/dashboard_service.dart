@@ -8,23 +8,6 @@ class DashboardService {
     return 0;
   }
 
-  static String _normalizeText(dynamic value) {
-    return value?.toString().trim().toLowerCase() ?? '';
-  }
-
-  static bool _isWargaAktif(Map<String, dynamic> data) {
-    final status = _normalizeText(data['status']);
-
-    if (status.isEmpty) return true;
-
-    return status != 'kosong';
-  }
-
-  static bool _isBelumLunas(Map<String, dynamic> data) {
-    final status = _normalizeText(data['status']);
-    return status.isNotEmpty && status != 'lunas';
-  }
-
   final FirebaseFirestore _db;
 
   DashboardService({FirebaseFirestore? firestore})
@@ -58,11 +41,8 @@ class DashboardService {
 
     int total = 0;
 
-    for (final doc in snap.docs) {
-      final data = doc.data();
-      if (_isBelumLunas(data)) {
-        total += _toInt(data['jumlah']);
-      }
+    for (var doc in snap.docs) {
+      total += _toInt(doc.data()["jumlah"]);
     }
 
     return total;
@@ -85,16 +65,12 @@ class DashboardService {
 
     int total = 0;
 
-    for (final doc in transaksiSnap.docs) {
-      final data = doc.data();
-      final jumlah = _toInt(data['jumlah']);
-      final jenis = _normalizeText(data['jenis']);
+    for (var doc in pemasukanSnap.docs) {
+      totalMasuk += _toInt(doc.data()["jumlah"]);
+    }
 
-      if (jenis == 'keluar') {
-        total -= jumlah;
-      } else {
-        total += jumlah;
-      }
+    for (var doc in pengeluaranSnap.docs) {
+      totalKeluar += _toInt(doc.data()["jumlah"]);
     }
 
     return total;
