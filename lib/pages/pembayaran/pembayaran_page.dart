@@ -10,7 +10,9 @@ class PembayaranPage extends StatefulWidget {
 }
 
 class _PembayaranPageState extends State<PembayaranPage> {
-  final ScrollController _scrollController = ScrollController();
+  final ScrollController _horizontalScrollController = ScrollController();
+  final ScrollController _verticalScrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
 
   static const EdgeInsets _defaultPadding = EdgeInsets.all(8.0);
   static const double _tableCellWidthNo = 50.0;
@@ -21,9 +23,6 @@ class _PembayaranPageState extends State<PembayaranPage> {
   static const double _tableCellWidthStatus = 80.0;
   static const double _tableCellWidthAksi = 120.0;
 
-  // Filter default: bulan & tahun sekarang
-  String _selectedBulan = '';
-  int _selectedTahun = DateTime.now().year;
   final List<String> _bulanList = [
     'Januari',
     'Februari',
@@ -39,7 +38,10 @@ class _PembayaranPageState extends State<PembayaranPage> {
     'Desember',
   ];
 
-  // Pagination
+  String _selectedBulan = '';
+  int _selectedTahun = DateTime.now().year;
+  String _searchQuery = ''; // <-- ditambahkan
+
   final List<DocumentSnapshot> _iuranDocs = [];
   DocumentSnapshot? _lastDoc;
   bool _isLoading = false;
@@ -51,21 +53,31 @@ class _PembayaranPageState extends State<PembayaranPage> {
   void initState() {
     super.initState();
     _selectedBulan = _bulanList[DateTime.now().month - 1];
-    _loadWarga();
-    _loadIuran(reset: true);
+    _initData();
 
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >=
-              _scrollController.position.maxScrollExtent - 50 &&
+    _verticalScrollController.addListener(() {
+      if (_verticalScrollController.position.pixels >=
+              _verticalScrollController.position.maxScrollExtent - 100 &&
           !_isLoading &&
           _hasMore) {
         _loadIuran();
       }
     });
+
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
+  }
+
+  Future<void> _initData() async {
+    await _loadWarga();
+    await _loadIuran(reset: true);
   }
 
   Future<void> _loadWarga() async {
-    final snap = await FirebaseFirestore.instance.collection("warga").get();
+    final snap = await FirebaseFirestore.instance.collection('warga').get();
     _wargaMap = {for (var d in snap.docs) d.id: d.data()};
     setState(() {});
   }
@@ -81,20 +93,15 @@ class _PembayaranPageState extends State<PembayaranPage> {
     }
 
     Query query = FirebaseFirestore.instance
-        .collection("iuran")
-        .where("bulan", isEqualTo: _selectedBulan)
-        .where("tahun", isEqualTo: _selectedTahun)
-        .orderBy(
-          "wargaId",
-        ) // pastikan ada index composite (bulan, tahun, wargaId)
+        .collection('iuran')
+        .where('bulan', isEqualTo: _selectedBulan)
+        .where('tahun', isEqualTo: _selectedTahun)
+        .orderBy('wargaId')
         .limit(20);
 
-    if (_lastDoc != null) {
-      query = query.startAfterDocument(_lastDoc!);
-    }
+    if (_lastDoc != null) query = query.startAfterDocument(_lastDoc!);
 
     final snap = await query.get();
-
     if (snap.docs.isEmpty) {
       _hasMore = false;
     } else {
@@ -105,10 +112,21 @@ class _PembayaranPageState extends State<PembayaranPage> {
     setState(() => _isLoading = false);
   }
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
+  Future<void> _updateIuranMonth(String iuranId, String bulanBaru) async {
+    await FirebaseFirestore.instance.collection('iuran').doc(iuranId).update({
+      'bulan': bulanBaru,
+    });
+    final idx = _iuranDocs.indexWhere((d) => d.id == iuranId);
+    if (idx != -1) {
+      final data = _iuranDocs[idx].data() as Map<String, dynamic>;
+      data['bulan'] = bulanBaru;
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Bulan iuran diubah ke $bulanBaru')),
+      );
+      setState(() {});
+    }
   }
 
   TableRow _buildHeaderRow() {
@@ -147,81 +165,60 @@ class _PembayaranPageState extends State<PembayaranPage> {
     );
   }
 
-  Future<void> _updateIuranMonth(String iuranId, String bulanBaru) async {
-    await FirebaseFirestore.instance.collection('iuran').doc(iuranId).update({
-      'bulan': bulanBaru,
-    });
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Bulan iuran diubah ke $bulanBaru.')));
-    _loadIuran(reset: true);
-  }
-
   TableRow _buildDataRow(
     int index,
     Map<String, dynamic> iuranData,
     Map<String, dynamic> wargaData,
     String iuranId,
   ) {
-    final status = iuranData["status"];
-    final namaWarga = wargaData["nama"] ?? '-';
-    final bulanIuran = (iuranData["bulan"] ?? '-').toString();
-    final selectedBulan = _bulanList.contains(bulanIuran) ? bulanIuran : null;
-    final jumlahIuran = iuranData["jumlah"] ?? '0';
+    final status = iuranData['status'];
+    final namaWarga = wargaData['nama'] ?? '-';
+    final bulanIuran = (iuranData['bulan'] ?? '-').toString();
+    final jumlahIuran = iuranData['jumlah'] ?? '0';
 
     return TableRow(
       decoration: BoxDecoration(
-        color: index.isEven ? Colors.grey.withValues(alpha: 0.05) : null,
+        color: index.isEven ? Colors.grey.withOpacity(0.05) : null,
       ),
       children: [
         Padding(padding: _defaultPadding, child: Text((index + 1).toString())),
         Padding(
           padding: _defaultPadding,
-          child: Text(wargaData["rumah"] ?? '-'),
+          child: Text(wargaData['rumah'] ?? '-'),
         ),
         Padding(padding: _defaultPadding, child: Text(namaWarga)),
         Padding(
           padding: _defaultPadding,
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              isExpanded: true,
-              value: selectedBulan,
-              hint: const Text('Pilih bulan'),
-              items: _bulanList
-                  .map(
-                    (bulan) => DropdownMenuItem<String>(
-                      value: bulan,
-                      child: Text(bulan),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (bulanBaru) async {
-                if (bulanBaru == null || bulanBaru == bulanIuran) return;
-                await _updateIuranMonth(iuranId, bulanBaru);
-              },
-            ),
+          child: DropdownButton<String>(
+            isExpanded: true,
+            value: _bulanList.contains(bulanIuran) ? bulanIuran : null,
+            hint: const Text('Pilih'),
+            items: _bulanList
+                .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                .toList(),
+            onChanged: (v) {
+              if (v != null && v != bulanIuran) _updateIuranMonth(iuranId, v);
+            },
           ),
         ),
-        Padding(padding: _defaultPadding, child: Text("Rp $jumlahIuran")),
+        Padding(padding: _defaultPadding, child: Text('Rp $jumlahIuran')),
         Padding(
           padding: _defaultPadding,
-          child: status == "lunas"
+          child: status == 'lunas'
               ? const Icon(Icons.check, color: Colors.green)
               : const Icon(Icons.close, color: Colors.red),
         ),
         Padding(
           padding: _defaultPadding,
-          child: status == "belum"
+          child: status == 'belum'
               ? ElevatedButton(
                   onPressed: () async {
-                    final bool? confirm = await showDialog<bool>(
+                    final ok = await showDialog<bool>(
                       context: context,
                       builder: (c) => AlertDialog(
                         title: const Text('Konfirmasi Pembayaran'),
                         content: Text(
-                          'Anda yakin ingin menandai iuran bulan "$bulanIuran" untuk "$namaWarga" sebesar Rp $jumlahIuran sebagai lunas?',
+                          'Tandai iuran bulan "$bulanIuran" untuk "$namaWarga" sebesar Rp $jumlahIuran sebagai lunas?',
                         ),
                         actions: [
                           TextButton(
@@ -235,30 +232,58 @@ class _PembayaranPageState extends State<PembayaranPage> {
                         ],
                       ),
                     );
-                    if (confirm == true) {
+                    if (ok == true) {
                       await IuranService().bayar(iuranId);
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Pembayaran berhasil!')),
                         );
+                        setState(() {});
                       }
                     }
                   },
-                  child: const Text("Bayar"),
+                  child: const Text('Bayar'),
                 )
-              : const Text("Lunas"),
+              : const Text('Lunas'),
         ),
       ],
     );
   }
 
   @override
+  void dispose() {
+    _horizontalScrollController.dispose();
+    _verticalScrollController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Filter + Sort (A-Z berdasarkan rumah)
+    final filteredDocs = _iuranDocs.where((doc) {
+      final iuranData = doc.data() as Map<String, dynamic>;
+      final wargaData = _wargaMap[iuranData['wargaId']];
+      if (wargaData == null) return false;
+
+      final rumah = (wargaData['rumah'] ?? '').toString().toLowerCase();
+      final nama = (wargaData['nama'] ?? '').toString().toLowerCase();
+      return rumah.contains(_searchQuery) || nama.contains(_searchQuery);
+    }).toList();
+
+    filteredDocs.sort((a, b) {
+      final aData = _wargaMap[(a.data() as Map<String, dynamic>)['wargaId']];
+      final bData = _wargaMap[(b.data() as Map<String, dynamic>)['wargaId']];
+      final aRumah = (aData?['rumah'] ?? '').toString();
+      final bRumah = (bData?['rumah'] ?? '').toString();
+      return aRumah.compareTo(bRumah);
+    });
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Pembayaran Iuran"),
+        title: const Text('Pembayaran Iuran'),
         actions: [
-          // Filter bulan & tahun
+          // Tahun
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: DropdownButton<int>(
@@ -276,6 +301,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
               },
             ),
           ),
+          // Bulan
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: DropdownButton<String>(
@@ -290,154 +316,130 @@ class _PembayaranPageState extends State<PembayaranPage> {
               },
             ),
           ),
+          // Search
+          SizedBox(
+            width: 200,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Cari nama atau rumah...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
       body: _wargaMap.isEmpty
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Header tetap
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Table(
-                    border: TableBorder.all(color: Colors.grey.shade300),
-                    columnWidths: const {
-                      0: FixedColumnWidth(_tableCellWidthNo),
-                      1: FixedColumnWidth(_tableCellWidthRumah),
-                      2: FixedColumnWidth(_tableCellWidthNama),
-                      3: FixedColumnWidth(_tableCellWidthBulan),
-                      4: FixedColumnWidth(_tableCellWidthJumlah),
-                      5: FixedColumnWidth(_tableCellWidthStatus),
-                      6: FixedColumnWidth(_tableCellWidthAksi),
-                    },
-                    children: [_buildHeaderRow()],
-                  ),
-                ),
-                // Body dengan scroll + pagination
-                Expanded(
-                  child: _iuranDocs.isEmpty && !_isLoading
-                      ? Center(
-                          child: Text(
-                            'Tidak ada data iuran untuk $_selectedBulan $_selectedTahun.',
-                          ),
-                        )
-                      : Scrollbar(
-                          controller: _scrollController,
+          : Padding(
+              padding: const EdgeInsets.all(12),
+              child: filteredDocs.isEmpty && !_isLoading
+                  ? Center(
+                      child: Text(
+                        'Tidak ada data iuran untuk $_selectedBulan $_selectedTahun.',
+                      ),
+                    )
+                  : Scrollbar(
+                      controller: _horizontalScrollController,
+                      thumbVisibility: true,
+                      child: SingleChildScrollView(
+                        controller: _horizontalScrollController,
+                        scrollDirection: Axis.horizontal,
+                        child: Scrollbar(
+                          controller: _verticalScrollController,
                           thumbVisibility: true,
-                          trackVisibility: true,
-                          child: ListView.builder(
-                            controller: _scrollController,
-                            itemCount: _iuranDocs.length + (_hasMore ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (index == _iuranDocs.length) {
-                                return const Padding(
-                                  padding: EdgeInsets.all(16),
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                );
-                              }
-
-                              final iuranDoc = _iuranDocs[index];
-                              final iuranData =
-                                  iuranDoc.data() as Map<String, dynamic>;
-                              final iuranId = iuranDoc.id;
-                              final wargaData = _wargaMap[iuranData["wargaId"]];
-
-                              if (wargaData == null) {
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                  ),
-                                  child: Table(
-                                    border: TableBorder.all(
-                                      color: Colors.grey.shade300,
-                                    ),
-                                    columnWidths: const {
-                                      0: FixedColumnWidth(_tableCellWidthNo),
-                                      1: FixedColumnWidth(_tableCellWidthRumah),
-                                      2: FixedColumnWidth(_tableCellWidthNama),
-                                      3: FixedColumnWidth(_tableCellWidthBulan),
-                                      4: FixedColumnWidth(_tableCellWidthJumlah),
-                                      5: FixedColumnWidth(_tableCellWidthStatus),
-                                      6: FixedColumnWidth(_tableCellWidthAksi),
-                                    },
-                                    children: [
-                                      TableRow(
-                                        children: [
-                                          const Padding(
-                                            padding: _defaultPadding,
-                                            child: Text(''),
-                                          ),
-                                          const Padding(
-                                            padding: _defaultPadding,
-                                            child: Text(
-                                              'Data Warga Tidak Ditemukan',
-                                              style: TextStyle(
-                                                fontStyle: FontStyle.italic,
-                                                color: Colors.red,
+                          child: SingleChildScrollView(
+                            controller: _verticalScrollController,
+                            child: Table(
+                              border: TableBorder.all(
+                                color: Colors.grey.shade300,
+                              ),
+                              columnWidths: const {
+                                0: FixedColumnWidth(_tableCellWidthNo),
+                                1: FixedColumnWidth(_tableCellWidthRumah),
+                                2: FixedColumnWidth(_tableCellWidthNama),
+                                3: FixedColumnWidth(_tableCellWidthBulan),
+                                4: FixedColumnWidth(_tableCellWidthJumlah),
+                                5: FixedColumnWidth(_tableCellWidthStatus),
+                                6: FixedColumnWidth(_tableCellWidthAksi),
+                              },
+                              children: [
+                                _buildHeaderRow(),
+                                ...filteredDocs.asMap().entries.map((entry) {
+                                  final i = entry.key;
+                                  final doc = entry.value;
+                                  final iuranData =
+                                      doc.data() as Map<String, dynamic>;
+                                  final wargaData =
+                                      _wargaMap[iuranData['wargaId']];
+                                  return wargaData == null
+                                      ? TableRow(
+                                          children: [
+                                            Padding(
+                                              padding: _defaultPadding,
+                                              child: Text((i + 1).toString()),
+                                            ),
+                                            const Padding(
+                                              padding: _defaultPadding,
+                                              child: Text(
+                                                'Data Warga Tidak Ditemukan',
+                                                style: TextStyle(
+                                                  fontStyle: FontStyle.italic,
+                                                  color: Colors.red,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          const Padding(
-                                            padding: _defaultPadding,
-                                            child: Text(''),
-                                          ),
-                                          const Padding(
-                                            padding: _defaultPadding,
-                                            child: Text(''),
-                                          ),
-                                          const Padding(
-                                            padding: _defaultPadding,
-                                            child: Text(''),
-                                          ),
-                                          const Padding(
-                                            padding: _defaultPadding,
-                                            child: Text(''),
-                                          ),
-                                          const Padding(
-                                            padding: _defaultPadding,
-                                            child: Text(''),
-                                          ),
-                                        ],
+                                            ...List.filled(
+                                              5,
+                                              const Padding(
+                                                padding: _defaultPadding,
+                                                child: Text(''),
+                                              ),
+                                            ),
+                                          ],
+                                        )
+                                      : _buildDataRow(
+                                          i,
+                                          iuranData,
+                                          wargaData,
+                                          doc.id,
+                                        );
+                                }),
+                                if (_hasMore)
+                                  TableRow(
+                                    children: [
+                                      const Padding(
+                                        padding: EdgeInsets.all(16),
+                                        child: Center(
+                                          child: CircularProgressIndicator(),
+                                        ),
+                                      ),
+                                      ...List.filled(
+                                        6,
+                                        const Padding(
+                                          padding: _defaultPadding,
+                                          child: Text(''),
+                                        ),
                                       ),
                                     ],
                                   ),
-                                );
-                              }
-
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                child: Table(
-                                  border: TableBorder.all(
-                                    color: Colors.grey.shade300,
-                                  ),
-                                  columnWidths: const {
-                                    0: FixedColumnWidth(_tableCellWidthNo),
-                                    1: FixedColumnWidth(_tableCellWidthRumah),
-                                    2: FixedColumnWidth(_tableCellWidthNama),
-                                    3: FixedColumnWidth(_tableCellWidthBulan),
-                                    4: FixedColumnWidth(_tableCellWidthJumlah),
-                                    5: FixedColumnWidth(_tableCellWidthStatus),
-                                    6: FixedColumnWidth(_tableCellWidthAksi),
-                                  },
-                                  children: [
-                                    _buildDataRow(
-                                      index,
-                                      iuranData,
-                                      wargaData,
-                                      iuranId,
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
+                              ],
+                            ),
                           ),
                         ),
-                ),
-              ],
+                      ),
+                    ),
             ),
     );
   }
