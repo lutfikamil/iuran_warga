@@ -1,6 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DashboardService {
+  static int _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is double) return value.round();
+    if (value is num) return value.toInt();
+    return 0;
+  }
+
   final FirebaseFirestore _db;
 
   DashboardService({FirebaseFirestore? firestore})
@@ -46,7 +53,7 @@ class DashboardService {
     int total = 0;
 
     for (var doc in snap.docs) {
-      total += (doc["jumlah"] ?? 0) as int;
+      total += _toInt(doc.data()["jumlah"]);
     }
 
     return total;
@@ -83,11 +90,11 @@ class DashboardService {
     int totalKeluar = 0;
 
     for (var doc in pemasukanSnap.docs) {
-      totalMasuk += (doc["jumlah"] ?? 0) as int;
+      totalMasuk += _toInt(doc.data()["jumlah"]);
     }
 
     for (var doc in pengeluaranSnap.docs) {
-      totalKeluar += (doc["jumlah"] ?? 0) as int;
+      totalKeluar += _toInt(doc.data()["jumlah"]);
     }
 
     return totalMasuk - totalKeluar;
