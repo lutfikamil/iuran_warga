@@ -35,12 +35,15 @@ class _WargaPageState extends State<WargaPage> {
   }
 
   int _hitungTunggakan(Map<String, dynamic>? pembayaran) {
-    if (pembayaran == null) return DateTime.now().month;
-
     final now = DateTime.now();
+    final bulanTerakhirTunggakan = now.month - 1;
+
+    if (bulanTerakhirTunggakan <= 0) return 0;
+    if (pembayaran == null) return bulanTerakhirTunggakan;
+
     int tunggakan = 0;
 
-    for (int i = 1; i <= now.month; i++) {
+    for (int i = 1; i <= bulanTerakhirTunggakan; i++) {
       final isPaid = pembayaran[i.toString()] == true;
       if (!isPaid) {
         tunggakan++;
