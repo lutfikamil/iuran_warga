@@ -28,7 +28,9 @@ class _PasswordChangeFormState extends State<PasswordChangeForm> {
       TextEditingController();
 
   bool _loading = false;
-
+  bool _obscureCurrent = true;
+  bool _obscureNew = true;
+  bool _obscureConfirm = true;
   Future<void> _changePassword() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -104,11 +106,23 @@ class _PasswordChangeFormState extends State<PasswordChangeForm> {
 
             TextFormField(
               controller: _currentPasswordController,
-              obscureText: true,
-              decoration: const InputDecoration(
+              obscureText: _obscureCurrent,
+              decoration: InputDecoration(
                 labelText: "Password Saat Ini",
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.lock_outline),
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.lock_outline),
+
+                // 👁️
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureCurrent ? Icons.visibility : Icons.visibility_off,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscureCurrent = !_obscureCurrent;
+                    });
+                  },
+                ),
               ),
               validator: (v) {
                 if (v == null || v.isEmpty) {
@@ -122,11 +136,23 @@ class _PasswordChangeFormState extends State<PasswordChangeForm> {
 
             TextFormField(
               controller: _newPasswordController,
-              obscureText: true,
-              decoration: const InputDecoration(
+              obscureText: _obscureNew,
+              decoration: InputDecoration(
                 labelText: "Password Baru",
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.lock),
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.lock),
+
+                // 👁️
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureNew ? Icons.visibility : Icons.visibility_off,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscureNew = !_obscureNew;
+                    });
+                  },
+                ),
               ),
               validator: (v) {
                 if (v == null || v.isEmpty) {
@@ -143,11 +169,23 @@ class _PasswordChangeFormState extends State<PasswordChangeForm> {
 
             TextFormField(
               controller: _confirmPasswordController,
-              obscureText: true,
-              decoration: const InputDecoration(
+              obscureText: _obscureConfirm,
+              decoration: InputDecoration(
                 labelText: "Konfirmasi Password Baru",
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.lock_reset),
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.lock_reset),
+
+                // 👁️
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureConfirm ? Icons.visibility : Icons.visibility_off,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscureConfirm = !_obscureConfirm;
+                    });
+                  },
+                ),
               ),
               validator: (v) {
                 if (v == null || v.isEmpty) {

@@ -20,6 +20,9 @@ class _LoginPageState extends State<LoginPage> {
 
   bool loading = false;
 
+  // ✅ TAMBAHAN
+  bool _obscurePassword = true;
+
   Future<void> login() async {
     setState(() {
       loading = true;
@@ -30,11 +33,13 @@ class _LoginPageState extends State<LoginPage> {
         identifierController.text.trim(),
         passwordController.text.trim(),
       );
+
       await SessionService.saveLogin(
         role: loginResult.role,
         identifier: loginResult.identifier,
         isAdmin: loginResult.isAdmin,
       );
+
       if (!mounted) return;
 
       Navigator.pushReplacementNamed(
@@ -61,21 +66,18 @@ class _LoginPageState extends State<LoginPage> {
       body: Center(
         child: SizedBox(
           width: 350,
-
           child: Card(
             elevation: 10,
-
             child: Padding(
               padding: const EdgeInsets.all(20),
-
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    "Login Sistem Iuran",
+                    "Login Sistem Iuran\nMULIA LAND",
+                    textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 22),
                   ),
-
                   const SizedBox(height: 20),
 
                   TextField(
@@ -88,12 +90,27 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 10),
 
+                  // ✅ PASSWORD FIELD + EYE
                   TextField(
                     controller: passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
                       labelText: "Password",
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
+
+                      // 👁️ ICON EYE
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
                     ),
                   ),
 
