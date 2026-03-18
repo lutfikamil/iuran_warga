@@ -112,9 +112,9 @@ class DashboardPage extends StatelessWidget {
       body: FutureBuilder(
         future: Future.wait([
           dashboardService.totalWargaAktif(),
-          dashboardService.totalSaldoKas(),
+          dashboardService.totalSaldoKasFormatted(),
           dashboardService.jumlahWargaMenunggak(),
-          dashboardService.totalNominalTunggakan(),
+          dashboardService.totalNominalTunggakanFormatted(),
           dashboardService.getStatistikKetaatan(),
         ]),
         builder: (context, snapshot) {
@@ -129,17 +129,21 @@ class DashboardPage extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
+                    ),
                     const SizedBox(height: 12),
                     const Text(
                       'Data dashboard gagal dimuat.',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      '${snapshot.error}',
-                      textAlign: TextAlign.center,
-                    ),
+                    Text('${snapshot.error}', textAlign: TextAlign.center),
                   ],
                 ),
               ),
@@ -147,9 +151,10 @@ class DashboardPage extends StatelessWidget {
           }
 
           final totalWarga = snapshot.data?[0] ?? 0;
-          final totalKas = snapshot.data?[1] ?? 0;
+          final totalKas = (snapshot.data?[1] as String?) ?? 'Rp 0';
+
           final belumBayar = snapshot.data?[2] ?? 0;
-          final tunggakan = snapshot.data?[3] ?? 0;
+          final tunggakan = (snapshot.data?[3] as String?) ?? 'Rp 0';
           final data = snapshot.data;
 
           final ketaatanData = (data != null && data.length > 4)
@@ -199,7 +204,7 @@ class DashboardPage extends StatelessWidget {
                           width: itemWidth,
                           child: DashboardStat(
                             title: "Total Kas",
-                            value: "Rp $totalKas",
+                            value: totalKas,
                             icon: Icons.account_balance_wallet,
                           ),
                         ),
@@ -215,7 +220,7 @@ class DashboardPage extends StatelessWidget {
                           width: itemWidth,
                           child: DashboardStat(
                             title: "Total Tunggakan",
-                            value: "Rp $tunggakan",
+                            value: tunggakan,
                             icon: Icons.money_off,
                           ),
                         ),

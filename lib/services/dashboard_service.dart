@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:intl/intl.dart';
 import '../utils/bulan_util.dart';
 
 class DashboardService {
@@ -16,9 +16,7 @@ class DashboardService {
 
   static bool _isWargaAktif(Map<String, dynamic> data) {
     final status = _normalizeText(data['status']);
-
     if (status.isEmpty) return true;
-
     return status != 'kosong';
   }
 
@@ -29,12 +27,17 @@ class DashboardService {
 
   static bool _isTunggakanIuran(Map<String, dynamic> data, {DateTime? now}) {
     if (!_isBelumLunas(data)) return false;
-
     return BulanUtil.isTunggakan(
       bulan: data['bulan']?.toString(),
       tahun: data['tahun'] as int?,
       now: now,
     );
+  }
+
+  // Formatter Rupiah ribuan dengan titik
+  static String _formatRupiah(int amount) {
+    final formatter = NumberFormat.decimalPattern('id_ID');
+    return 'Rp ${formatter.format(amount)}';
   }
 
   final FirebaseFirestore _db;
@@ -47,18 +50,15 @@ class DashboardService {
   /// =========================
   Future<int> jumlahWargaMenunggak() async {
     final snap = await _db.collection('iuran').get();
-
     final Set<String> wargaIds = {};
 
     for (final doc in snap.docs) {
       final data = doc.data();
       final wargaId = data['wargaId']?.toString();
-
       if (wargaId != null && wargaId.isNotEmpty && _isTunggakanIuran(data)) {
         wargaIds.add(wargaId);
       }
     }
-
     return wargaIds.length;
   }
 
@@ -67,7 +67,6 @@ class DashboardService {
   /// =========================
   Future<int> totalNominalTunggakan() async {
     final snap = await _db.collection('iuran').get();
-
     int total = 0;
 
     for (final doc in snap.docs) {
@@ -76,8 +75,13 @@ class DashboardService {
         total += _toInt(data['jumlah']);
       }
     }
-
     return total;
+  }
+
+  /// Versi string format rupiah
+  Future<String> totalNominalTunggakanFormatted() async {
+    final total = await totalNominalTunggakan();
+    return _formatRupiah(total);
   }
 
   /// =========================
@@ -85,7 +89,6 @@ class DashboardService {
   /// =========================
   Future<int> totalWargaAktif() async {
     final snap = await _db.collection('warga').get();
-
     return snap.docs.where((doc) => _isWargaAktif(doc.data())).length;
   }
 
@@ -94,7 +97,6 @@ class DashboardService {
   /// =========================
   Future<int> totalSaldoKas() async {
     final transaksiSnap = await _db.collection('transaksi').get();
-
     int total = 0;
 
     for (final doc in transaksiSnap.docs) {
@@ -111,15 +113,19 @@ class DashboardService {
     return total;
   }
 
+  /// Versi string format rupiah
+  Future<String> totalSaldoKasFormatted() async {
+    final total = await totalSaldoKas();
+    return _formatRupiah(total);
+  }
+
   /// PRESENTASE KEPATUHAN WARGA
   Future<double> persentaseKetaatan() async {
     final totalWarga = await totalWargaAktif();
     final wargaNunggak = await jumlahWargaMenunggak();
 
     if (totalWarga == 0) return 0;
-
     final taat = totalWarga - wargaNunggak;
-
     return (taat / totalWarga) * 100;
   }
 
