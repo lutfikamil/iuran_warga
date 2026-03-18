@@ -97,6 +97,29 @@ class IuranService {
     }
   }
 
+
+  Future<String> bayarIuranWarga({
+    required String wargaId,
+    required String bulan,
+    required int tahun,
+  }) async {
+    final iuranSnapshot = await _firestore
+        .collection("iuran")
+        .where("wargaId", isEqualTo: wargaId)
+        .where("bulan", isEqualTo: bulan)
+        .where("tahun", isEqualTo: tahun)
+        .limit(1)
+        .get();
+
+    if (iuranSnapshot.docs.isEmpty) {
+      throw Exception("Data iuran $bulan $tahun untuk warga tidak ditemukan.");
+    }
+
+    final iuranId = iuranSnapshot.docs.first.id;
+    await bayar(iuranId);
+    return iuranId;
+  }
+
   /// Memproses pembayaran iuran.
   /// Menggunakan Firestore transaction untuk memastikan atomisitas operasi,
   /// dan menulis ke koleksi 'transaksi'.

@@ -69,6 +69,45 @@ class ListBulanIuran {
 
     return result;
   }
+  List<int> getTahunFromIuran(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
+    final Set<int> tahunSet = {};
+
+    for (var doc in docs) {
+      final tahun = doc.data()["tahun"];
+      if (tahun is int) {
+        tahunSet.add(tahun);
+      }
+    }
+
+    final tahunList = tahunSet.toList()..sort();
+    return tahunList;
+  }
+
+  Map<String, Map<int, String>> buildRekapFromIuran(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+    List<int> tahunList,
+  ) {
+    final Map<String, Map<int, String>> result = {
+      for (final bulan in bulanList) bulan: {},
+    };
+
+    for (final doc in docs) {
+      final data = doc.data();
+      final bulan = data["bulan"];
+      final tahun = data["tahun"];
+      final jumlah = (data["jumlah"] as num?) ?? 0;
+      final status = data["status"];
+
+      if (bulan is! String || tahun is! int) continue;
+
+      result[bulan]?[tahun] = status == 'lunas'
+          ? "Lunas\n${formatRupiah(jumlah)}"
+          : "Belum";
+    }
+
+    return result;
+  }
+
 }
 
 class BulanUtil {
