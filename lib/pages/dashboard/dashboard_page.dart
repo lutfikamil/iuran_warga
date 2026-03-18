@@ -16,12 +16,13 @@ class DashboardPage extends StatelessWidget {
       "title": "Data Warga",
       "icon": Icons.people,
       "route": AppRoutes.warga,
-      "color": Colors.green,
+      "color": Colors.blue,
     },
     {
-      "title": "Pembayaran",
+      "title": "Pemasukan Iuran",
       "icon": Icons.payments,
       "route": AppRoutes.pembayaran,
+      "color": Colors.green,
     },
     {
       "title": "Pemasukan Umum",

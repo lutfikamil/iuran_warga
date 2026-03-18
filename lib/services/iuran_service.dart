@@ -97,7 +97,6 @@ class IuranService {
     }
   }
 
-
   Future<String> bayarIuranWarga({
     required String wargaId,
     required String bulan,
@@ -158,10 +157,9 @@ class IuranService {
           "jumlah": data["jumlah"],
           "dari": dariKeterangan,
           "penerima": role, // Ambil dari session user yang login
-          "keterangan":
-              "Pembayaran iuran bulan ${data["bulan"]} untuk ID Iuran: $iuranId",
+          "keterangan": "Iuran bulan ${data["bulan"]} ID Iuran: $iuranId",
           "statusBendahara": "menunggu", // Status awal saat dimasukkan
-          "referensiId": iuranId, // Opsional: referensi ke iuran aslinya
+          "referensiId": iuranId,
           "createdAt": FieldValue.serverTimestamp(),
           "updatedAt": FieldValue.serverTimestamp(),
         });
