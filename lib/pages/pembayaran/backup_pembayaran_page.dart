@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/iuran_service.dart';
@@ -41,7 +40,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
 
   String _selectedBulan = '';
   int _selectedTahun = DateTime.now().year;
-  String _searchQuery = '';
+  String _searchQuery = ''; // <-- ditambahkan
 
   final List<DocumentSnapshot> _iuranDocs = [];
   DocumentSnapshot? _lastDoc;
@@ -49,8 +48,6 @@ class _PembayaranPageState extends State<PembayaranPage> {
   bool _hasMore = true;
 
   Map<String, Map<String, dynamic>> _wargaMap = {};
-
-  Timer? _debounce;
 
   @override
   void initState() {
@@ -68,10 +65,8 @@ class _PembayaranPageState extends State<PembayaranPage> {
     });
 
     _searchController.addListener(() {
-      if (_debounce?.isActive ?? false) _debounce!.cancel();
-      _debounce = Timer(const Duration(milliseconds: 400), () {
-        _searchQuery = _searchController.text.trim().toLowerCase();
-        _loadIuran(reset: true); // reset pagination tiap search baru
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
       });
     });
   }
@@ -100,24 +95,11 @@ class _PembayaranPageState extends State<PembayaranPage> {
     Query query = FirebaseFirestore.instance
         .collection('iuran')
         .where('bulan', isEqualTo: _selectedBulan)
-        .where('tahun', isEqualTo: _selectedTahun);
+        .where('tahun', isEqualTo: _selectedTahun)
+        .orderBy('wargaId')
+        .limit(20);
 
-    if (_searchQuery.isNotEmpty) {
-      // Cari di field gabungan nama+rumah
-      query = query
-          .where('search_key', isGreaterThanOrEqualTo: _searchQuery)
-          .where('search_key', isLessThan: '$_searchQuery\uf8ff');
-      query = query.orderBy('search_key');
-    } else {
-      // Tanpa search, urutkan berdasarkan rumah (ambil dari wargaId)
-      query = query.orderBy('wargaId');
-    }
-
-    query = query.limit(20);
-
-    if (_lastDoc != null) {
-      query = query.startAfterDocument(_lastDoc!);
-    }
+    if (_lastDoc != null) query = query.startAfterDocument(_lastDoc!);
 
     final snap = await query.get();
     if (snap.docs.isEmpty) {
@@ -134,45 +116,16 @@ class _PembayaranPageState extends State<PembayaranPage> {
     await FirebaseFirestore.instance.collection('iuran').doc(iuranId).update({
       'bulan': bulanBaru,
     });
-
     final idx = _iuranDocs.indexWhere((d) => d.id == iuranId);
     if (idx != -1) {
-      (_iuranDocs[idx].data() as Map<String, dynamic>)['bulan'] = bulanBaru;
+      final data = _iuranDocs[idx].data() as Map<String, dynamic>;
+      data['bulan'] = bulanBaru;
     }
-
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Bulan iuran diubah ke $bulanBaru')),
       );
       setState(() {});
-    }
-  }
-
-  Future<void> _showBulanPicker(String iuranId, String current) async {
-    final selected = await showDialog<String>(
-      context: context,
-      builder: (c) => SimpleDialog(
-        title: const Text('Pilih Bulan'),
-        children: _bulanList
-            .map(
-              (b) => SimpleDialogOption(
-                onPressed: () => Navigator.pop(c, b),
-                child: Text(
-                  b,
-                  style: TextStyle(
-                    fontWeight: b == current
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                  ),
-                ),
-              ),
-            )
-            .toList(),
-      ),
-    );
-
-    if (selected != null && selected != current) {
-      _updateIuranMonth(iuranId, selected);
     }
   }
 
@@ -236,19 +189,17 @@ class _PembayaranPageState extends State<PembayaranPage> {
         Padding(padding: _defaultPadding, child: Text(namaWarga)),
         Padding(
           padding: _defaultPadding,
-          child: status == 'belum'
-              ? InkWell(
-                  onTap: () => _showBulanPicker(iuranId, bulanIuran),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(bulanIuran),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.edit, size: 16, color: Colors.blue),
-                    ],
-                  ),
-                )
-              : Text(bulanIuran),
+          child: DropdownButton<String>(
+            isExpanded: true,
+            value: _bulanList.contains(bulanIuran) ? bulanIuran : null,
+            hint: const Text('Pilih'),
+            items: _bulanList
+                .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                .toList(),
+            onChanged: (v) {
+              if (v != null && v != bulanIuran) _updateIuranMonth(iuranId, v);
+            },
+          ),
         ),
         Padding(padding: _defaultPadding, child: Text('Rp $jumlahIuran')),
         Padding(
@@ -301,7 +252,6 @@ class _PembayaranPageState extends State<PembayaranPage> {
 
   @override
   void dispose() {
-    _debounce?.cancel();
     _horizontalScrollController.dispose();
     _verticalScrollController.dispose();
     _searchController.dispose();
@@ -310,13 +260,30 @@ class _PembayaranPageState extends State<PembayaranPage> {
 
   @override
   Widget build(BuildContext context) {
-    // TIDAK ADA FILTER LAGI DI SINI
-    final docs = _iuranDocs;
+    // Filter + Sort (A-Z berdasarkan rumah)
+    final filteredDocs = _iuranDocs.where((doc) {
+      final iuranData = doc.data() as Map<String, dynamic>;
+      final wargaData = _wargaMap[iuranData['wargaId']];
+      if (wargaData == null) return false;
+
+      final rumah = (wargaData['rumah'] ?? '').toString().toLowerCase();
+      final nama = (wargaData['nama'] ?? '').toString().toLowerCase();
+      return rumah.contains(_searchQuery) || nama.contains(_searchQuery);
+    }).toList();
+
+    filteredDocs.sort((a, b) {
+      final aData = _wargaMap[(a.data() as Map<String, dynamic>)['wargaId']];
+      final bData = _wargaMap[(b.data() as Map<String, dynamic>)['wargaId']];
+      final aRumah = (aData?['rumah'] ?? '').toString();
+      final bRumah = (bData?['rumah'] ?? '').toString();
+      return aRumah.compareTo(bRumah);
+    });
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pembayaran Iuran'),
         actions: [
+          // Tahun
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: DropdownButton<int>(
@@ -334,6 +301,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
               },
             ),
           ),
+          // Bulan
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: DropdownButton<String>(
@@ -348,6 +316,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
               },
             ),
           ),
+          // Search
           SizedBox(
             width: 200,
             child: Padding(
@@ -375,7 +344,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
           ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(12),
-              child: docs.isEmpty && !_isLoading
+              child: filteredDocs.isEmpty && !_isLoading
                   ? Center(
                       child: Text(
                         'Tidak ada data iuran untuk $_selectedBulan $_selectedTahun.',
@@ -407,7 +376,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
                               },
                               children: [
                                 _buildHeaderRow(),
-                                ...docs.asMap().entries.map((entry) {
+                                ...filteredDocs.asMap().entries.map((entry) {
                                   final i = entry.key;
                                   final doc = entry.value;
                                   final iuranData =

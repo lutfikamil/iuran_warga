@@ -4,7 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'routes/app_routes.dart';
 import 'services/firestore_offline_service.dart';
 import 'services/session_service.dart';
-import 'firebase_options.dart';
+import 'firebase_options_dev.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

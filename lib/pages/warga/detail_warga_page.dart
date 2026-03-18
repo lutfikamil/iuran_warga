@@ -1,35 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'add_warga_page.dart';
 import '../../services/log_service.dart';
-import '../../utils/list_waktu_iuran_util.dart';
+import '../../utils/bulan_util.dart';
 
 class DetailWargaPage extends StatelessWidget {
   final String wargaId;
 
   DetailWargaPage({super.key, required this.wargaId});
-  final waktuUtil = ListWaktuIuran();
+
+  final bulanUtil = ListBulanIuran();
+
   Future<void> _deleteWarga(BuildContext context) async {
-    final confirm = await showDialog(
+    final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Hapus Warga"),
         content: const Text("Apakah yakin ingin menghapus warga ini?"),
         actions: [
           TextButton(
-            child: const Text("Batal"),
             onPressed: () => Navigator.pop(context, false),
+            child: const Text("Batal"),
           ),
           TextButton(
-            child: const Text("Hapus"),
             onPressed: () => Navigator.pop(context, true),
+            child: const Text("Hapus"),
           ),
         ],
       ),
     );
 
-    if (confirm == true) {
+    if (confirm != true) return;
+
+    try {
       await FirebaseFirestore.instance
           .collection("warga")
           .doc(wargaId)
@@ -40,14 +45,19 @@ class DetailWargaPage extends StatelessWidget {
         target: 'warga',
         detail: 'Hapus data warga id=$wargaId',
       );
-     if (!context.mounted) return;
-      {
+
+      if (context.mounted) {
         Navigator.pop(context);
-        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Data warga berhasil dihapus")),
+        );
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Data warga berhasil dihapus")),
-      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Gagal menghapus: $e")));
+      }
     }
   }
 
@@ -69,10 +79,21 @@ class DetailWargaPage extends StatelessWidget {
     );
   }
 
-  Widget buildRekapCard(List<QueryDocumentSnapshot> docs) {
-    final tahunList = waktuUtil.getTahun(docs);
-
-    final rekap = waktuUtil.buildRekap(docs, tahunList);
+  Widget _buildRekapCard(
+    List<QueryDocumentSnapshot> docs,
+    String role,
+    BuildContext context,
+  ) {
+    final now = DateTime.now();
+    final tahunList = docs.isEmpty ? [now.year] : bulanUtil.getTahun(docs);
+    final rekap = bulanUtil.buildRekap(docs, tahunList);
+    final canPay = {
+      'admin',
+      'ketua',
+      'bendahara',
+      'sekretaris',
+      'petugas',
+    }.contains(role);
 
     return Card(
       elevation: 3,
@@ -85,41 +106,43 @@ class DetailWargaPage extends StatelessWidget {
               "Rekap Pembayaran",
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
-
             const SizedBox(height: 12),
-
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
                 columns: [
                   const DataColumn(label: Text("Bulan")),
-
                   ...tahunList.map(
                     (t) => DataColumn(label: Text(t.toString())),
                   ),
+                  if (canPay) const DataColumn(label: Text("Aksi")),
                 ],
-
-                rows: waktuUtil.bulanList.map((bulan) {
+                rows: bulanUtil.bulanList.map((bulan) {
                   return DataRow(
                     cells: [
                       DataCell(Text(bulan)),
-
                       ...tahunList.map((tahun) {
                         final value = rekap[bulan]?[tahun];
-
-                        if (value == null) {
-                          return const DataCell(
-                            Text("Belum", style: TextStyle(color: Colors.red)),
-                          );
-                        }
-
                         return DataCell(
-                          Text(
-                            value,
-                            style: const TextStyle(color: Colors.green),
-                          ),
+                          value == null
+                              ? const Text(
+                                  "Belum",
+                                  style: TextStyle(color: Colors.red),
+                                )
+                              : Text(
+                                  value,
+                                  style: const TextStyle(color: Colors.green),
+                                ),
                         );
                       }),
+                      if (canPay)
+                        DataCell(
+                          ElevatedButton(
+                            onPressed: () =>
+                                _handleBayar(context, bulan, tahunList.first),
+                            child: const Text("Bayar"),
+                          ),
+                        ),
                     ],
                   );
                 }).toList(),
@@ -131,12 +154,28 @@ class DetailWargaPage extends StatelessWidget {
     );
   }
 
+  void _handleBayar(BuildContext context, String bulan, int tahun) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Pembayaran"),
+        content: Text("Bayar untuk $bulan $tahun"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Tutup"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
     final wargaRef = FirebaseFirestore.instance
         .collection("warga")
         .doc(wargaId);
-
     final iuranRef = FirebaseFirestore.instance
         .collection("transaksi")
         .where("jenis", isEqualTo: "masuk")
@@ -146,225 +185,188 @@ class DetailWargaPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text("Detail Warga")),
-      body: FutureBuilder<DocumentSnapshot>(
-        future: wargaRef.get(),
+      body: FutureBuilder<List<DocumentSnapshot>>(
+        future: Future.wait([
+          wargaRef.get(),
+          FirebaseFirestore.instance.collection('users').doc(uid).get(),
+        ]),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Gagal memuat warga: ${snapshot.error}'));
+            return Center(child: Text('Gagal memuat data: ${snapshot.error}'));
           }
-
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
+          final uid = FirebaseAuth.instance.currentUser?.uid;
+          final wargaSnap = snapshot.data![0];
+          final userSnap = snapshot.data![1];
 
-          final rawData = snapshot.data!.data();
-          if (rawData == null) {
+          final wargaData = wargaSnap.data() as Map<String, dynamic>?;
+          if (wargaData == null) {
             return const Center(child: Text('Data warga tidak ditemukan.'));
           }
-
-          final data = rawData as Map<String, dynamic>;
-          final nama = data["nama"] ?? "-";
-          final rumah = data["rumah"] ?? "-";
-          final hp = data["hp"] ?? "-";
-          final status = data["status"] ?? "-";
-          return StreamBuilder<QuerySnapshot>(
-            stream: iuranRef.snapshots(),
-            builder: (context, iuranSnapshot) {
-              if (iuranSnapshot.hasError) {
-                return Center(
-                  child: Text(
-                    'Gagal memuat riwayat pembayaran: ${iuranSnapshot.error}',
-                  ),
-                );
-              }
-
-              if (!iuranSnapshot.hasData) {
+          return FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('users')
+                .doc(uid)
+                .get(),
+            builder: (context, userSnapshot) {
+              if (!userSnapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              final iuranDocs = iuranSnapshot.data!.docs.toList()
-                ..sort((a, b) {
-                  final ta =
-                      (a.data() as Map<String, dynamic>)["tanggal"]
-                          as Timestamp?;
-                  final tb =
-                      (b.data() as Map<String, dynamic>)["tanggal"]
-                          as Timestamp?;
-                  return (tb?.millisecondsSinceEpoch ?? 0).compareTo(
-                    ta?.millisecondsSinceEpoch ?? 0,
+              final userData =
+                  userSnapshot.data!.data() as Map<String, dynamic>?;
+              final role = (userData?["role"] ?? "warga")
+                  .toString()
+                  .toLowerCase()
+                  .trim();
+
+              print("ROLE LOGIN: $role");
+
+              return StreamBuilder<QuerySnapshot>(
+                stream: iuranRef.snapshots(),
+                builder: (context, iuranSnapshot) {
+                  if (iuranSnapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Gagal memuat riwayat pembayaran: ${iuranSnapshot.error}',
+                      ),
+                    );
+                  }
+                  if (!iuranSnapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final iuranDocs = iuranSnapshot.data!.docs;
+                  final totalBayar = iuranDocs.fold<num>(
+                    0,
+                    (sum, doc) =>
+                        sum +
+                        ((doc.data() as Map<String, dynamic>)['jumlah'] ?? 0),
                   );
-                });
 
-              num totalBayar = 0;
-
-              for (var doc in iuranDocs) {
-                final data = doc.data() as Map<String, dynamic>;
-                totalBayar += data["jumlah"] ?? 0;
-              }
-
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    /// PROFIL WARGA
-                    Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 3,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            const Icon(Icons.person, size: 70),
-                            const SizedBox(height: 10),
-                            Text(
-                              nama,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-
-                            const Divider(height: 30),
-
-                            _buildInfo("Nomor Rumah", rumah),
-                            _buildInfo("No HP", hp),
-                            _buildInfo("Status Rumah", status),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    /// RINGKASAN IURAN
-                    Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 3,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            const Text(
-                              "Ringkasan Iuran",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 3,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
                               children: [
-                                Column(
-                                  children: [
-                                    const Text("Total Bayar"),
-                                    const SizedBox(height: 5),
-                                    Text(
-                                      waktuUtil.formatRupiah(totalBayar),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ],
+                                const Icon(Icons.person, size: 70),
+                                const SizedBox(height: 10),
+                                Text(
+                                  wargaData['nama'] ?? '-',
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-
-                                Column(
+                                const Divider(height: 30),
+                                _buildInfo(
+                                  "Nomor Rumah",
+                                  wargaData['rumah'] ?? '-',
+                                ),
+                                _buildInfo("No HP", wargaData['hp'] ?? '-'),
+                                _buildInfo(
+                                  "Status Rumah",
+                                  wargaData['status'] ?? '-',
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 3,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              children: [
+                                const Text(
+                                  "Ringkasan Iuran",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceAround,
                                   children: [
-                                    const Text("Transaksi"),
-                                    const SizedBox(height: 5),
-                                    Text(
+                                    _summaryItem(
+                                      "Total Bayar",
+                                      bulanUtil.formatRupiah(totalBayar),
+                                    ),
+                                    _summaryItem(
+                                      "Transaksi",
                                       iuranDocs.length.toString(),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
                                     ),
                                   ],
                                 ),
                               ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    /// RIWAYAT PEMBAYARAN
-                    Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 3,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
+                        const SizedBox(height: 16),
+                        _buildRekapCard(iuranDocs, role, context),
+                        const SizedBox(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            const Text(
-                              "Riwayat Pembayaran",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.edit),
+                              label: const Text("Edit"),
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      AddWargaPage(wargaId: wargaId),
+                                ),
                               ),
                             ),
-
-                            const SizedBox(height: 10),
-
-                            if (iuranDocs.isEmpty)
-                              const Padding(
-                                padding: EdgeInsets.all(10),
-                                child: Text("Belum ada pembayaran"),
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.delete),
+                              label: const Text("Hapus"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
                               ),
-                            buildRekapCard(iuranDocs),
+                              onPressed: () => _deleteWarga(context),
+                            ),
                           ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    /// BUTTON
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.edit),
-                          label: const Text("Edit"),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    AddWargaPage(wargaId: wargaId),
-                              ),
-                            );
-                          },
-                        ),
-
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.delete),
-                          label: const Text("Hapus"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                          ),
-                          onPressed: () => _deleteWarga(context),
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  );
+                },
               );
             },
           );
         },
       ),
+    );
+  }
+
+  Widget _summaryItem(String label, String value) {
+    return Column(
+      children: [
+        Text(label),
+        const SizedBox(height: 5),
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+      ],
     );
   }
 }

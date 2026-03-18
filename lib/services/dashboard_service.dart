@@ -7,22 +7,58 @@ class DashboardService {
     : _db = firestore ?? FirebaseFirestore.instance;
 
   /// =========================
-  /// TOTAL WARGA
+  /// 1. JUMLAH WARGA MENUNGGAK (UNIK PER ORANG)
   /// =========================
-  Future<int> totalWarga() async {
-    final snap = await _db.collection("warga").count().get();
-    return snap.count ?? 0;
+  Future<int> jumlahWargaMenunggak() async {
+    final now = Timestamp.fromDate(DateTime.now());
+
+    final snap = await _db
+        .collection("iuran")
+        .where("status", isEqualTo: "belum")
+        .where("jatuhTempo", isLessThan: now)
+        .get();
+
+    // pakai Set supaya tidak double orang
+    final Set<String> wargaIds = {};
+
+    for (var doc in snap.docs) {
+      final wargaId = doc["wargaId"];
+      if (wargaId != null) {
+        wargaIds.add(wargaId);
+      }
+    }
+
+    return wargaIds.length;
   }
 
   /// =========================
-  /// TOTAL PEMBAYARAN BULAN
+  /// 2. TOTAL NOMINAL TUNGGAKAN
   /// =========================
-  Future<int> totalPembayaranBulan(String bulan) async {
+  Future<int> totalNominalTunggakan() async {
+    final now = Timestamp.fromDate(DateTime.now());
+
     final snap = await _db
-        .collection("transaksi")
-        .where("jenis", isEqualTo: "masuk")
-        .where("sumberPemasukan", isEqualTo: "iuran")
-        .where("bulanIuran", isEqualTo: bulan)
+        .collection("iuran")
+        .where("status", isEqualTo: "belum")
+        .where("jatuhTempo", isLessThan: now)
+        .get();
+
+    int total = 0;
+
+    for (var doc in snap.docs) {
+      total += (doc["jumlah"] ?? 0) as int;
+    }
+
+    return total;
+  }
+
+  /// =========================
+  /// 3. TOTAL WARGA AKTIF
+  /// =========================
+  Future<int> totalWargaAktif() async {
+    final snap = await _db
+        .collection("warga")
+        .where("status", whereIn: ["Dihuni", "Sewa"])
         .count()
         .get();
 
@@ -30,81 +66,57 @@ class DashboardService {
   }
 
   /// =========================
-  /// TOTAL PEMASUKAN
+  /// 4. TOTAL SALDO KAS
   /// =========================
-  Future<int> totalPemasukan() async {
-    final snap = await _db
+  Future<int> totalSaldoKas() async {
+    final pemasukanSnap = await _db
         .collection("transaksi")
         .where("jenis", isEqualTo: "masuk")
         .get();
 
-    int total = 0;
-
-    for (var doc in snap.docs) {
-      total += (doc["jumlah"] ?? 0) as int;
-    }
-
-    return total;
-  }
-
-  /// =========================
-  /// TOTAL PENGELUARAN
-  /// =========================
-  Future<int> totalPengeluaran() async {
-    final snap = await _db
+    final pengeluaranSnap = await _db
         .collection("transaksi")
         .where("jenis", isEqualTo: "keluar")
         .get();
 
-    int total = 0;
+    int totalMasuk = 0;
+    int totalKeluar = 0;
 
-    for (var doc in snap.docs) {
-      total += (doc["jumlah"] ?? 0) as int;
+    for (var doc in pemasukanSnap.docs) {
+      totalMasuk += (doc["jumlah"] ?? 0) as int;
     }
 
-    return total;
-  }
-
-  /// =========================
-  /// TOTAL KAS
-  /// =========================
-  Future<int> totalKas() async {
-    final masuk = await totalPemasukan();
-    final keluar = await totalPengeluaran();
-
-    return masuk - keluar;
-  }
-
-  /// =========================
-  /// TOTAL TUNGGAKAN
-  /// =========================
-  Future<int> wargaBelumBayar() async {
-    final now = Timestamp.fromDate(DateTime.now());
-
-    final snap = await _db
-        .collection("iuran")
-        .where("status", isEqualTo: "belum")
-        .where("jatuhTempo", isLessThan: now)
-        .get();
-
-    return snap.docs.length;
-  }
-
-  Future<int> totalTunggakan() async {
-    final now = Timestamp.fromDate(DateTime.now());
-
-    final snap = await _db
-        .collection("iuran")
-        .where("status", isEqualTo: "belum")
-        .where("jatuhTempo", isLessThan: now)
-        .get();
-
-    int total = 0;
-
-    for (var doc in snap.docs) {
-      total += (doc["jumlah"] ?? 0) as int;
+    for (var doc in pengeluaranSnap.docs) {
+      totalKeluar += (doc["jumlah"] ?? 0) as int;
     }
 
-    return total;
+    return totalMasuk - totalKeluar;
+  }
+
+  /// PRESENSTASE KEPATUHAN WARGA
+  Future<double> persentaseKetaatan() async {
+    final totalWarga = await totalWargaAktif();
+    final wargaNunggak = await jumlahWargaMenunggak();
+
+    if (totalWarga == 0) return 0;
+
+    final taat = totalWarga - wargaNunggak;
+
+    return (taat / totalWarga) * 100;
+  }
+
+  Future<Map<String, dynamic>> getStatistikKetaatan() async {
+    final totalWarga = await totalWargaAktif();
+    final wargaNunggak = await jumlahWargaMenunggak();
+
+    final wargaTaat = totalWarga - wargaNunggak;
+    final persen = totalWarga == 0 ? 0 : (wargaTaat / totalWarga) * 100;
+
+    return {
+      "total": totalWarga,
+      "nunggak": wargaNunggak,
+      "taat": wargaTaat,
+      "persen": persen,
+    };
   }
 }

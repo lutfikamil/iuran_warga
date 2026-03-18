@@ -1,11 +1,10 @@
-// File: lib/services/iuran_service.dart (MODIFIED)
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:iuran_perumahan/services/session_service.dart';
 import 'package:logger/logger.dart';
 import 'settings_service.dart';
 import 'log_service.dart';
+import '../utils/bulan_util.dart';
 
 final Logger _logger = Logger(
   printer: PrettyPrinter(
@@ -41,11 +40,10 @@ class IuranService {
     if (existingIuran.docs.isNotEmpty) {
       throw Exception("Iuran $bulan $tahun sudah pernah dibuat");
     }
-
+    final bulanIndex = BulanUtil.toInt(bulan);
     final wargaSnapshot = await _firestore.collection("warga").get();
-
     final iuranAmount = await SettingsService().getIuranAmount();
-
+    final jatuhTempo = DateTime(tahun, bulanIndex, 10);
     WriteBatch batch = _firestore.batch();
     int counter = 0;
 
@@ -58,6 +56,7 @@ class IuranService {
         "tahun": tahun,
         "jumlah": iuranAmount,
         "status": "belum",
+        "jatuhTempo": Timestamp.fromDate(jatuhTempo),
         "createdAt": FieldValue.serverTimestamp(),
         "updatedAt": FieldValue.serverTimestamp(),
       });

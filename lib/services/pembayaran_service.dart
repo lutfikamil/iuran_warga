@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../utils/list_waktu_iuran_util.dart';
+import '../utils/bulan_util.dart';
 
 /// Legacy wrapper untuk data pembayaran.
 ///
@@ -12,7 +12,7 @@ class PembayaranService {
     final now = DateTime.now();
     final String bulan = data['bulanIuran'];
     final int tahun = data['tahunIuran'];
-    final bulanList = ListWaktuIuran().bulanList;
+    final bulanList = ListBulanIuran().bulanList;
     final int bulanIndex = bulanList.indexOf(bulan) + 1;
     final payload = <String, dynamic>{
       ...data,

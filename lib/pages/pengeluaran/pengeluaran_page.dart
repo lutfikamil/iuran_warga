@@ -27,46 +27,6 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
     super.dispose();
   }
 
-  // --- Konfirmasi Hapus ---
-  //  Future<void> _confirmDelete(BuildContext context, String id) async {
-  //    final bool? confirm = await showDialog<bool>(
-  //      context: context,
-  //      builder: (context) => AlertDialog(
-  //        title: const Text('Hapus Pengeluaran'),
-  //        content: const Text(
-  //          'Apakah Anda yakin ingin menghapus pengeluaran ini?',
-  //        ),
-  //        actions: [
-  //          TextButton(
-  //            onPressed: () => Navigator.of(context).pop(false),
-  //            child: const Text('Batal'),
-  //          ),
-  //          TextButton(
-  //            onPressed: () => Navigator.of(context).pop(true),
-  //            child: const Text('Hapus'),
-  //          ),
-  //        ],
-  //      ),
-  //    );
-  //
-  //    if (confirm == true) {
-  //      try {
-  //        await PengeluaranService().deletePengeluaran(id);
-  //        if (mounted) {
-  //          ScaffoldMessenger.of(context).showSnackBar(
-  //            const SnackBar(content: Text('Pengeluaran berhasil dihapus!')),
-  //          );
-  //        }
-  //      } catch (e) {
-  //        if (mounted) {
-  //          ScaffoldMessenger.of(context).showSnackBar(
-  //            SnackBar(content: Text('Gagal menghapus pengeluaran: $e')),
-  //          );
-  //        }
-  //      }
-  //    }
-  //  }
-
   // --- Fungsi untuk mengformat Rupiah ---
   String formatRupiah(num number) {
     final formatter = NumberFormat.currency(
@@ -85,7 +45,6 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
   static const double _colWidthDari = 120.0;
   static const double _colWidthPenerima = 120.0;
   static const double _colWidthKeterangan = 200.0;
-  //static const double _colWidthAksi = 100.0;
 
   /// HEADER ROW TABLE
   TableRow _buildHeaderRow() {
@@ -100,7 +59,6 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
         _buildHeaderCell("Dari", textAlign: TextAlign.left),
         _buildHeaderCell("Penerima", textAlign: TextAlign.left),
         _buildHeaderCell("Keterangan", textAlign: TextAlign.left),
-        //  _buildHeaderCell("Aksi", textAlign: TextAlign.center),
       ],
     );
   }
@@ -167,30 +125,6 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
           padding: _tableCellPadding,
           child: Text(keterangan, textAlign: TextAlign.left),
         ),
-        //        Padding(
-        //          padding: _tableCellPadding,
-        //          child: Row(
-        //            mainAxisAlignment: MainAxisAlignment.center,
-        //            children: [
-        //      IconButton(
-        //        icon: const Icon(Icons.edit, size: 20),
-        //        onPressed: () {
-        //          Navigator.push(
-        //            context,
-        //            MaterialPageRoute(
-        //              builder: (context) =>
-        //                  AddPengeluaranPage(pengeluaranId: pengeluaranId),
-        //            ),
-        //          );
-        //        },
-        //      ),
-        //  IconButton(
-        //    icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-        //    onPressed: () => _confirmDelete(context, pengeluaranId),
-        //  ),
-        //            ],
-        //          ),
-        //        ),
       ],
     );
   }
@@ -247,6 +181,8 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
+            // ignore: avoid_print
+            print(snapshot.error);
             return Center(
               child: Text(
                 'Error: ${snapshot.error}',

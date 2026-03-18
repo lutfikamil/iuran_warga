@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
-class ListWaktuIuran {
+class ListBulanIuran {
   final List<String> bulanList = const [
     "Januari",
     "Februari",
@@ -69,4 +69,40 @@ class ListWaktuIuran {
 
     return result;
   }
+}
+
+class BulanUtil {
+  static const Map<String, int> _bulanMap = {
+    "Januari": 1,
+    "Februari": 2,
+    "Maret": 3,
+    "April": 4,
+    "Mei": 5,
+    "Juni": 6,
+    "Juli": 7,
+    "Agustus": 8,
+    "September": 9,
+    "Oktober": 10,
+    "November": 11,
+    "Desember": 12,
+  };
+
+  /// String → int (nama bulan ke angka)
+  static int toInt(String? bulan) {
+    if (bulan == null) return DateTime.now().month;
+    return _bulanMap[bulan] ?? DateTime.now().month;
+  }
+
+  /// int → String (angka ke nama bulan)
+  static String toStringMonth(int bulan) {
+    return _bulanMap.entries
+        .firstWhere(
+          (e) => e.value == bulan,
+          orElse: () => const MapEntry("Tidak diketahui", 0),
+        )
+        .key;
+  }
+
+  /// List semua bulan
+  static List<String> get allBulan => _bulanMap.keys.toList();
 }

@@ -52,7 +52,7 @@ class DashboardPage extends StatelessWidget {
   /// MENU CARD
   /// =========================
   Widget menuCard(BuildContext context, Map<String, dynamic> menu) {
-    final color = menu["color"]?? Colors.orange;
+    final color = menu["color"] ?? Colors.orange;
     return InkWell(
       onTap: () => Navigator.pushNamed(context, menu["route"]),
       child: Card(
@@ -110,25 +110,40 @@ class DashboardPage extends StatelessWidget {
       ),
       body: FutureBuilder(
         future: Future.wait([
-          dashboardService.totalWarga(),
-          dashboardService.totalKas(),
-          dashboardService.wargaBelumBayar(),
-          dashboardService.totalTunggakan(),
+          dashboardService.totalWargaAktif(),
+          dashboardService.totalSaldoKas(),
+          dashboardService.jumlahWargaMenunggak(),
+          dashboardService.totalNominalTunggakan(),
+          dashboardService.getStatistikKetaatan(),
         ]),
         builder: (context, snapshot) {
-          if (snapshot.connectionState!= ConnectionState.done) {
+          if (snapshot.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final totalWarga = snapshot.data?[0]?? 0;
-          final totalKas = snapshot.data?[1]?? 0;
-          final belumBayar = snapshot.data?[2]?? 0;
-          final tunggakan = snapshot.data?[3]?? 0;
+          final totalWarga = snapshot.data?[0] ?? 0;
+          final totalKas = snapshot.data?[1] ?? 0;
+          final belumBayar = snapshot.data?[2] ?? 0;
+          final tunggakan = snapshot.data?[3] ?? 0;
+          final data = snapshot.data;
+
+          final ketaatanData = (data != null && data.length > 4)
+              ? data[4] as Map<String, dynamic>
+              : {};
+
+          final persenKetaatan = (ketaatanData["persen"] ?? 0).toDouble();
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  "Ketaatan Warga: ${persenKetaatan.toStringAsFixed(1)}%",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 LayoutBuilder(
                   builder: (context, constraints) {
                     int crossAxisCount = 2;
@@ -197,8 +212,8 @@ class DashboardPage extends StatelessWidget {
                   spacing: 18,
                   runSpacing: 18,
                   children: menus
-                     .map((menu) => menuCard(context, menu))
-                     .toList(),
+                      .map((menu) => menuCard(context, menu))
+                      .toList(),
                 ),
               ],
             ),

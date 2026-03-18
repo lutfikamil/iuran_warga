@@ -65,14 +65,16 @@ class _PemasukanPageState extends State<PemasukanPage> {
       await PemasukanService().deletePemasukan(id);
       if (!mounted) {
         return;
-      }if (!context.mounted) return;
+      }
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Pemasukan umum berhasil dihapus!')),
       );
     } catch (e) {
       if (!mounted) {
         return;
-      }if (!context.mounted) return;
+      }
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Gagal menghapus pemasukan umum: $e')),
       );
@@ -96,7 +98,10 @@ class _PemasukanPageState extends State<PemasukanPage> {
     );
   }
 
-  Widget _buildHeaderCell(String text, {TextAlign textAlign = TextAlign.center}) {
+  Widget _buildHeaderCell(
+    String text, {
+    TextAlign textAlign = TextAlign.center,
+  }) {
     return Padding(
       padding: _tableCellPadding,
       child: Text(
@@ -162,7 +167,8 @@ class _PemasukanPageState extends State<PemasukanPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AddPemasukanPage(pemasukanId: doc.id),
+                      builder: (context) =>
+                          AddPemasukanPage(pemasukanId: doc.id),
                     ),
                   );
                 },
@@ -190,14 +196,16 @@ class _PemasukanPageState extends State<PemasukanPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Daftar Pemasukan Umum'),
+        title: const Text('Pemasukan Umum'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const AddPemasukanPage()),
+                MaterialPageRoute(
+                  builder: (context) => const AddPemasukanPage(),
+                ),
               );
             },
           ),
@@ -240,6 +248,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
+                  print(snapshot.error);
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
                 if (!snapshot.hasData) {
@@ -250,10 +259,12 @@ class _PemasukanPageState extends State<PemasukanPage> {
                 final filteredDocs = allDocs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   final dari = (data['dari'] ?? '').toString().toLowerCase();
-                  final penerima =
-                      (data['penerima'] ?? '').toString().toLowerCase();
-                  final keterangan =
-                      (data['keterangan'] ?? '').toString().toLowerCase();
+                  final penerima = (data['penerima'] ?? '')
+                      .toString()
+                      .toLowerCase();
+                  final keterangan = (data['keterangan'] ?? '')
+                      .toString()
+                      .toLowerCase();
 
                   return _searchQuery.isEmpty ||
                       dari.contains(_searchQuery) ||
@@ -285,7 +296,8 @@ class _PemasukanPageState extends State<PemasukanPage> {
                         child: SingleChildScrollView(
                           controller: _verticalScrollController,
                           child: SizedBox(
-                            width: _colWidthNo +
+                            width:
+                                _colWidthNo +
                                 _colWidthTanggal +
                                 _colWidthJumlah +
                                 _colWidthDari +
@@ -310,7 +322,8 @@ class _PemasukanPageState extends State<PemasukanPage> {
                                 _buildHeaderRow(),
                                 ...List.generate(
                                   filteredDocs.length,
-                                  (index) => _buildDataRow(index, filteredDocs[index]),
+                                  (index) =>
+                                      _buildDataRow(index, filteredDocs[index]),
                                 ),
                               ],
                             ),
