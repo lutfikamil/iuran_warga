@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../utils/bulan_util.dart';
+
 class DashboardService {
   static int _toInt(dynamic value) {
     if (value is int) return value;
@@ -25,6 +27,16 @@ class DashboardService {
     return status.isNotEmpty && status != 'lunas';
   }
 
+  static bool _isTunggakanIuran(Map<String, dynamic> data, {DateTime? now}) {
+    if (!_isBelumLunas(data)) return false;
+
+    return BulanUtil.isTunggakan(
+      bulan: data['bulan']?.toString(),
+      tahun: data['tahun'] as int?,
+      now: now,
+    );
+  }
+
   final FirebaseFirestore _db;
 
   DashboardService({FirebaseFirestore? firestore})
@@ -42,7 +54,7 @@ class DashboardService {
       final data = doc.data();
       final wargaId = data['wargaId']?.toString();
 
-      if (wargaId != null && wargaId.isNotEmpty && _isBelumLunas(data)) {
+      if (wargaId != null && wargaId.isNotEmpty && _isTunggakanIuran(data)) {
         wargaIds.add(wargaId);
       }
     }
@@ -58,8 +70,11 @@ class DashboardService {
 
     int total = 0;
 
-    for (var doc in snap.docs) {
-      total += _toInt(doc.data()["jumlah"]);
+    for (final doc in snap.docs) {
+      final data = doc.data();
+      if (_isTunggakanIuran(data)) {
+        total += _toInt(data['jumlah']);
+      }
     }
 
     return total;

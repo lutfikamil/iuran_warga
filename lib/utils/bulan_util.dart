@@ -69,7 +69,10 @@ class ListBulanIuran {
 
     return result;
   }
-  List<int> getTahunFromIuran(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
+
+  List<int> getTahunFromIuran(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  ) {
     final Set<int> tahunSet = {};
 
     for (var doc in docs) {
@@ -107,7 +110,6 @@ class ListBulanIuran {
 
     return result;
   }
-
 }
 
 class BulanUtil {
@@ -144,4 +146,32 @@ class BulanUtil {
 
   /// List semua bulan
   static List<String> get allBulan => _bulanMap.keys.toList();
+
+  /// True bila periode iuran berada sebelum bulan berjalan.
+  static bool isSebelumBulanBerjalan({
+    required int tahun,
+    required int bulan,
+    DateTime? now,
+  }) {
+    final currentDate = now ?? DateTime.now();
+    final awalBulanBerjalan = DateTime(currentDate.year, currentDate.month);
+    final periodeIuran = DateTime(tahun, bulan);
+
+    return periodeIuran.isBefore(awalBulanBerjalan);
+  }
+
+  /// True bila iuran yang dimaksud sudah termasuk tunggakan.
+  static bool isTunggakan({
+    required String? bulan,
+    required int? tahun,
+    DateTime? now,
+  }) {
+    if (bulan == null || tahun == null) return false;
+
+    return isSebelumBulanBerjalan(
+      tahun: tahun,
+      bulan: toInt(bulan),
+      now: now,
+    );
+  }
 }
