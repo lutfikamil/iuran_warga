@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
-import 'add_warga_page.dart';
+import '../../services/iuran_service.dart';
 import '../../services/log_service.dart';
 import '../../utils/bulan_util.dart';
+import 'add_warga_page.dart';
 
 class DetailWargaPage extends StatelessWidget {
   final String wargaId;
@@ -35,10 +36,7 @@ class DetailWargaPage extends StatelessWidget {
     if (confirm != true) return;
 
     try {
-      await FirebaseFirestore.instance
-          .collection("warga")
-          .doc(wargaId)
-          .delete();
+      await FirebaseFirestore.instance.collection("warga").doc(wargaId).delete();
 
       await LogService().logEvent(
         action: 'hapus_warga',
@@ -54,9 +52,9 @@ class DetailWargaPage extends StatelessWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Gagal menghapus: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal menghapus: $e")),
+        );
       }
     }
   }
@@ -80,13 +78,13 @@ class DetailWargaPage extends StatelessWidget {
   }
 
   Widget _buildRekapCard(
-    List<QueryDocumentSnapshot> docs,
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
     String role,
     BuildContext context,
   ) {
     final now = DateTime.now();
-    final tahunList = docs.isEmpty ? [now.year] : bulanUtil.getTahun(docs);
-    final rekap = bulanUtil.buildRekap(docs, tahunList);
+    final tahunList = docs.isEmpty ? [now.year] : bulanUtil.getTahunFromIuran(docs);
+    final rekap = bulanUtil.buildRekapFromIuran(docs, tahunList);
     final canPay = {
       'admin',
       'ketua',
@@ -112,36 +110,55 @@ class DetailWargaPage extends StatelessWidget {
               child: DataTable(
                 columns: [
                   const DataColumn(label: Text("Bulan")),
-                  ...tahunList.map(
-                    (t) => DataColumn(label: Text(t.toString())),
-                  ),
+                  ...tahunList.map((tahun) => DataColumn(label: Text('$tahun'))),
                   if (canPay) const DataColumn(label: Text("Aksi")),
                 ],
                 rows: bulanUtil.bulanList.map((bulan) {
+                  final unpaidDocs = docs.where((doc) {
+                    final data = doc.data();
+                    return data['bulan'] == bulan && data['status'] != 'lunas';
+                  }).toList()
+                    ..sort(
+                      (a, b) => ((a.data()['tahun'] as int?) ?? now.year)
+                          .compareTo((b.data()['tahun'] as int?) ?? now.year),
+                    );
+
                   return DataRow(
                     cells: [
                       DataCell(Text(bulan)),
                       ...tahunList.map((tahun) {
                         final value = rekap[bulan]?[tahun];
+                        final isLunas = value != null && value != 'Belum';
                         return DataCell(
                           value == null
                               ? const Text(
-                                  "Belum",
+                                  'Belum',
                                   style: TextStyle(color: Colors.red),
                                 )
                               : Text(
                                   value,
-                                  style: const TextStyle(color: Colors.green),
+                                  style: TextStyle(
+                                    color: isLunas ? Colors.green : Colors.red,
+                                  ),
                                 ),
                         );
                       }),
                       if (canPay)
                         DataCell(
-                          ElevatedButton(
-                            onPressed: () =>
-                                _handleBayar(context, bulan, tahunList.first),
-                            child: const Text("Bayar"),
-                          ),
+                          unpaidDocs.isEmpty
+                              ? const Text(
+                                  'Lunas',
+                                  style: TextStyle(color: Colors.green),
+                                )
+                              : ElevatedButton(
+                                  onPressed: () =>
+                                      _handleBayar(context, bulan, unpaidDocs),
+                                  child: Text(
+                                    unpaidDocs.length > 1
+                                        ? 'Bayar (${unpaidDocs.length})'
+                                        : 'Bayar',
+                                  ),
+                                ),
                         ),
                     ],
                   );
@@ -154,37 +171,83 @@ class DetailWargaPage extends StatelessWidget {
     );
   }
 
-  void _handleBayar(BuildContext context, String bulan, int tahun) {
-    showDialog(
+  Future<void> _handleBayar(
+    BuildContext context,
+    String bulan,
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> unpaidDocs,
+  ) async {
+    if (unpaidDocs.isEmpty) return;
+
+    final selectedDoc = unpaidDocs.length == 1
+        ? unpaidDocs.first
+        : await showDialog<QueryDocumentSnapshot<Map<String, dynamic>>>(
+            context: context,
+            builder: (dialogContext) => SimpleDialog(
+              title: Text('Pilih tunggakan $bulan yang akan dibayar'),
+              children: unpaidDocs.map((doc) {
+                final tahun = (doc.data()['tahun'] as int?) ?? DateTime.now().year;
+                final jumlah = (doc.data()['jumlah'] as num?) ?? 0;
+                return SimpleDialogOption(
+                  onPressed: () => Navigator.pop(dialogContext, doc),
+                  child: Text('$bulan $tahun • ${bulanUtil.formatRupiah(jumlah)}'),
+                );
+              }).toList(),
+            ),
+          );
+
+    if (selectedDoc == null) return;
+
+    final tahun = (selectedDoc.data()['tahun'] as int?) ?? DateTime.now().year;
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Pembayaran"),
-        content: Text("Bayar untuk $bulan $tahun"),
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Konfirmasi Pembayaran'),
+        content: Text('Tandai iuran $bulan $tahun sebagai lunas?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Tutup"),
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Bayar'),
           ),
         ],
       ),
     );
+
+    if (confirmed != true) return;
+
+    try {
+      await IuranService().bayarIuranWarga(
+        wargaId: wargaId,
+        bulan: bulan,
+        tahun: tahun,
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Pembayaran iuran $bulan $tahun berhasil.')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memproses pembayaran: $e')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    final wargaRef = FirebaseFirestore.instance
-        .collection("warga")
-        .doc(wargaId);
+    final wargaRef = FirebaseFirestore.instance.collection('warga').doc(wargaId);
     final iuranRef = FirebaseFirestore.instance
-        .collection("transaksi")
-        .where("jenis", isEqualTo: "masuk")
-        .where("sumberPemasukan", isEqualTo: "iuran")
-        .where("wargaId", isEqualTo: wargaId)
-        .orderBy("tanggal", descending: true);
+        .collection('iuran')
+        .where('wargaId', isEqualTo: wargaId);
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Detail Warga")),
+      appBar: AppBar(title: const Text('Detail Warga')),
       body: FutureBuilder<List<DocumentSnapshot>>(
         future: Future.wait([
           wargaRef.get(),
@@ -197,34 +260,27 @@ class DetailWargaPage extends StatelessWidget {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          final uid = FirebaseAuth.instance.currentUser?.uid;
-          final wargaSnap = snapshot.data![0];
-          final userSnap = snapshot.data![1];
 
+          final wargaSnap = snapshot.data![0];
           final wargaData = wargaSnap.data() as Map<String, dynamic>?;
           if (wargaData == null) {
             return const Center(child: Text('Data warga tidak ditemukan.'));
           }
+
           return FutureBuilder<DocumentSnapshot>(
-            future: FirebaseFirestore.instance
-                .collection('users')
-                .doc(uid)
-                .get(),
+            future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
             builder: (context, userSnapshot) {
               if (!userSnapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              final userData =
-                  userSnapshot.data!.data() as Map<String, dynamic>?;
-              final role = (userData?["role"] ?? "warga")
+              final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+              final role = (userData?['role'] ?? 'warga')
                   .toString()
                   .toLowerCase()
                   .trim();
 
-              print("ROLE LOGIN: $role");
-
-              return StreamBuilder<QuerySnapshot>(
+              return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: iuranRef.snapshots(),
                 builder: (context, iuranSnapshot) {
                   if (iuranSnapshot.hasError) {
@@ -239,12 +295,14 @@ class DetailWargaPage extends StatelessWidget {
                   }
 
                   final iuranDocs = iuranSnapshot.data!.docs;
-                  final totalBayar = iuranDocs.fold<num>(
-                    0,
-                    (sum, doc) =>
-                        sum +
-                        ((doc.data() as Map<String, dynamic>)['jumlah'] ?? 0),
-                  );
+                  final totalBayar = iuranDocs.fold<num>(0, (sum, doc) {
+                    final data = doc.data();
+                    if (data['status'] != 'lunas') return sum;
+                    return sum + ((data['jumlah'] as num?) ?? 0);
+                  });
+                  final totalTransaksiLunas = iuranDocs
+                      .where((doc) => doc.data()['status'] == 'lunas')
+                      .length;
 
                   return SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
@@ -269,13 +327,10 @@ class DetailWargaPage extends StatelessWidget {
                                   ),
                                 ),
                                 const Divider(height: 30),
+                                _buildInfo('Nomor Rumah', wargaData['rumah'] ?? '-'),
+                                _buildInfo('No HP', wargaData['hp'] ?? '-'),
                                 _buildInfo(
-                                  "Nomor Rumah",
-                                  wargaData['rumah'] ?? '-',
-                                ),
-                                _buildInfo("No HP", wargaData['hp'] ?? '-'),
-                                _buildInfo(
-                                  "Status Rumah",
+                                  'Status Rumah',
                                   wargaData['status'] ?? '-',
                                 ),
                               ],
@@ -293,7 +348,7 @@ class DetailWargaPage extends StatelessWidget {
                             child: Column(
                               children: [
                                 const Text(
-                                  "Ringkasan Iuran",
+                                  'Ringkasan Iuran',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 18,
@@ -301,16 +356,15 @@ class DetailWargaPage extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 16),
                                 Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceAround,
+                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                                   children: [
                                     _summaryItem(
-                                      "Total Bayar",
+                                      'Total Bayar',
                                       bulanUtil.formatRupiah(totalBayar),
                                     ),
                                     _summaryItem(
-                                      "Transaksi",
-                                      iuranDocs.length.toString(),
+                                      'Transaksi',
+                                      totalTransaksiLunas.toString(),
                                     ),
                                   ],
                                 ),
@@ -326,18 +380,17 @@ class DetailWargaPage extends StatelessWidget {
                           children: [
                             ElevatedButton.icon(
                               icon: const Icon(Icons.edit),
-                              label: const Text("Edit"),
+                              label: const Text('Edit'),
                               onPressed: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) =>
-                                      AddWargaPage(wargaId: wargaId),
+                                  builder: (_) => AddWargaPage(wargaId: wargaId),
                                 ),
                               ),
                             ),
                             ElevatedButton.icon(
                               icon: const Icon(Icons.delete),
-                              label: const Text("Hapus"),
+                              label: const Text('Hapus'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.red,
                               ),
