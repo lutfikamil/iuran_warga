@@ -4,6 +4,7 @@ class WargaModel {
   final String rumah;
   final String hp;
   final String status;
+  final bool iuranAktif;
   final String? role;
   final String? tanggalBergabung;
 
@@ -13,6 +14,7 @@ class WargaModel {
     required this.rumah,
     required this.hp,
     required this.status,
+    required this.iuranAktif,
     this.role,
     this.tanggalBergabung,
   });
@@ -24,6 +26,9 @@ class WargaModel {
       rumah: data['rumah'] ?? '',
       hp: data['hp'] ?? '',
       status: data['status'] ?? '',
+      iuranAktif: data['status']?.toString().toLowerCase() == 'kosong'
+          ? data['iuranAktif'] == true
+          : true,
       role: data['role'] as String?,
       tanggalBergabung: data['tanggalBergabung'] as String?,
     );
@@ -35,6 +40,7 @@ class WargaModel {
       'rumah': rumah,
       'hp': hp,
       'status': status,
+      'iuranAktif': iuranAktif,
       'role': role,
       'tanggalBergabung': tanggalBergabung,
     };

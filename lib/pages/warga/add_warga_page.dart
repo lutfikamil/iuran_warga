@@ -22,6 +22,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
 
   String? _selectedStatus;
   String _selectedRole = 'warga';
+  bool _isIuranAktifUntukRumahKosong = false;
 
   final List<String> _statusOptions = ['Dihuni', 'Kosong', 'Sewa'];
   final List<String> _roleOptions = [
@@ -64,8 +65,15 @@ class _AddWargaPageState extends State<AddWargaPage> {
         _namaController.text = data['nama'] ?? '';
         _rumahController.text = data['rumah'] ?? '';
         _hpController.text = data['hp'] ?? '';
+
         _selectedStatus = data['status'];
         _selectedRole = (data['role'] ?? 'warga').toLowerCase();
+
+        _selectedStatus = data['status'] ?? _statusOptions.first;
+        _selectedRole = (data['role'] ?? 'warga').toString().toLowerCase();
+        _isIuranAktifUntukRumahKosong =
+            data['status']?.toString().toLowerCase() == 'kosong' &&
+            data['iuranAktif'] == true;
       }
     } catch (e) {
       if (!mounted) return;
@@ -99,6 +107,19 @@ class _AddWargaPageState extends State<AddWargaPage> {
           ? '123456'
           : _passwordController.text.trim();
 
+      final isRumahKosong = (_selectedStatus ?? '').toLowerCase() == 'kosong';
+
+      final wargaData = <String, dynamic>{
+        'nama': nama,
+        'rumah': rumah,
+        'blok': blok,
+        'nomor': nomor,
+        'hp': hp,
+        'status': _selectedStatus,
+        'iuranAktif': isRumahKosong ? _isIuranAktifUntukRumahKosong : true,
+        'role': _selectedRole,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
       String wargaId;
 
       if (_isEditing) {
@@ -182,7 +203,8 @@ class _AddWargaPageState extends State<AddWargaPage> {
 Halo Bapak/Ibu $nama
 
 Akun Anda telah dibuat.
-Untuk mengetahui Informasi pembayaran iuran Anda dan keuangan di Perumahan kita tercinta ini
+Untuk mengetahui Informasi pembayaran iuran Anda dan
+Keadaan keuangan di Perumahan kita tercinta ini.
 
   Login:
 Email: $email
@@ -286,11 +308,46 @@ Pengurus Perumahan Mulia Land Patria.
                   labelText: 'Status',
                   border: OutlineInputBorder(),
                 ),
-                items: _statusOptions
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (v) => setState(() => _selectedStatus = v),
+
+                items: _statusOptions.map((status) {
+                  return DropdownMenuItem<String>(
+                    value: status,
+                    child: Text(status),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  setState(() {
+                    final previousStatus = _selectedStatus;
+                    _selectedStatus = newValue;
+                    if ((newValue ?? '').toLowerCase() == 'kosong' &&
+                        (previousStatus ?? '').toLowerCase() != 'kosong') {
+                      _isIuranAktifUntukRumahKosong = false;
+                    }
+                  });
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Status rumah tidak boleh kosong';
+                  }
+                  return null;
+                },
               ),
+              if ((_selectedStatus ?? '').toLowerCase() == 'kosong') ...[
+                const SizedBox(height: 16),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Aktifkan iuran untuk rumah kosong'),
+                  subtitle: const Text(
+                    'Default nonaktif. Nyalakan bila rumah kosong ini tetap dikenakan iuran.',
+                  ),
+                  value: _isIuranAktifUntukRumahKosong,
+                  onChanged: (value) {
+                    setState(() {
+                      _isIuranAktifUntukRumahKosong = value;
+                    });
+                  },
+                ),
+              ],
               const SizedBox(height: 16),
               DropdownButtonFormField(
                 initialValue: _selectedRole,
