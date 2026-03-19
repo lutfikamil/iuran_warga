@@ -21,6 +21,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
 
   String? _selectedStatus;
   String _selectedRole = 'warga';
+  bool _isIuranAktifUntukRumahKosong = false;
 
   final List<String> _statusOptions = ['Dihuni', 'Kosong', 'Sewa'];
   final List<String> _roleOptions = [
@@ -67,6 +68,9 @@ class _AddWargaPageState extends State<AddWargaPage> {
         _hpController.text = data['hp'] ?? '';
         _selectedStatus = data['status'] ?? _statusOptions.first;
         _selectedRole = (data['role'] ?? 'warga').toString().toLowerCase();
+        _isIuranAktifUntukRumahKosong =
+            data['status']?.toString().toLowerCase() == 'kosong' &&
+            data['iuranAktif'] == true;
       }
     } catch (e) {
       if (!mounted) return;
@@ -99,6 +103,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
       final nomor = rumahData['nomor'];
       final hp = _hpController.text.trim();
       final identifier = _resolveIdentifier();
+      final isRumahKosong = (_selectedStatus ?? '').toLowerCase() == 'kosong';
 
       final wargaData = <String, dynamic>{
         'nama': nama,
@@ -107,6 +112,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
         'nomor': nomor,
         'hp': hp,
         'status': _selectedStatus,
+        'iuranAktif': isRumahKosong ? _isIuranAktifUntukRumahKosong : true,
         'role': _selectedRole,
         'updatedAt': FieldValue.serverTimestamp(),
       };
@@ -291,7 +297,12 @@ class _AddWargaPageState extends State<AddWargaPage> {
                 }).toList(),
                 onChanged: (newValue) {
                   setState(() {
+                    final previousStatus = _selectedStatus;
                     _selectedStatus = newValue;
+                    if ((newValue ?? '').toLowerCase() == 'kosong' &&
+                        (previousStatus ?? '').toLowerCase() != 'kosong') {
+                      _isIuranAktifUntukRumahKosong = false;
+                    }
                   });
                 },
                 validator: (value) {
@@ -301,6 +312,22 @@ class _AddWargaPageState extends State<AddWargaPage> {
                   return null;
                 },
               ),
+              if ((_selectedStatus ?? '').toLowerCase() == 'kosong') ...[
+                const SizedBox(height: 16),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Aktifkan iuran untuk rumah kosong'),
+                  subtitle: const Text(
+                    'Default nonaktif. Nyalakan bila rumah kosong ini tetap dikenakan iuran.',
+                  ),
+                  value: _isIuranAktifUntukRumahKosong,
+                  onChanged: (value) {
+                    setState(() {
+                      _isIuranAktifUntukRumahKosong = value;
+                    });
+                  },
+                ),
+              ],
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _selectedRole,

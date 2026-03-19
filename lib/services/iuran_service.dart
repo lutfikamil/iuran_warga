@@ -29,6 +29,15 @@ class IuranService {
     }
   }
 
+  bool _isIuranEnabledForWarga(Map<String, dynamic> data) {
+    final status = (data['status'] ?? '').toString().trim().toLowerCase();
+    if (status != 'kosong') {
+      return true;
+    }
+
+    return data['iuranAktif'] == true;
+  }
+
   Future<void> generateIuran(String bulan, int tahun) async {
     final existingIuran = await _firestore
         .collection("iuran")
@@ -48,6 +57,11 @@ class IuranService {
     int counter = 0;
 
     for (var warga in wargaSnapshot.docs) {
+      final wargaData = warga.data();
+      if (!_isIuranEnabledForWarga(wargaData)) {
+        continue;
+      }
+
       final ref = _firestore.collection("iuran").doc();
 
       batch.set(ref, {
