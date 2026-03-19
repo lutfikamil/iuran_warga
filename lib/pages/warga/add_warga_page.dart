@@ -65,10 +65,6 @@ class _AddWargaPageState extends State<AddWargaPage> {
         _namaController.text = data['nama'] ?? '';
         _rumahController.text = data['rumah'] ?? '';
         _hpController.text = data['hp'] ?? '';
-
-        _selectedStatus = data['status'];
-        _selectedRole = (data['role'] ?? 'warga').toLowerCase();
-
         _selectedStatus = data['status'] ?? _statusOptions.first;
         _selectedRole = (data['role'] ?? 'warga').toString().toLowerCase();
         _isIuranAktifUntukRumahKosong =
