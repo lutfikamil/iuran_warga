@@ -125,16 +125,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
         await FirebaseFirestore.instance
             .collection('warga')
             .doc(wargaId)
-            .update({
-              'nama': nama,
-              'rumah': rumah,
-              'blok': blok,
-              'nomor': nomor,
-              'hp': hp,
-              'status': _selectedStatus,
-              'role': _selectedRole,
-              'updatedAt': FieldValue.serverTimestamp(),
-            });
+            .update(wargaData);
 
         /// 🔥 update user login juga
         await upsertUserLogin(
@@ -161,15 +152,8 @@ class _AddWargaPageState extends State<AddWargaPage> {
 
         /// simpan warga
         await newDoc.set({
-          'nama': nama,
-          'rumah': rumah,
-          'blok': blok,
-          'nomor': nomor,
-          'hp': hp,
-          'status': _selectedStatus,
-          'role': _selectedRole,
+          ...wargaData,
           'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
         });
 
         /// 🔥 buat user login (PUSAT LOGIKA)
