@@ -5,6 +5,7 @@ import 'package:logger/logger.dart';
 import 'settings_service.dart';
 import 'log_service.dart';
 import '../utils/bulan_util.dart';
+import 'whatsapp_service.dart';
 
 final Logger _logger = Logger(
   printer: PrettyPrinter(
@@ -56,6 +57,7 @@ class IuranService {
         "tahun": tahun,
         "jumlah": iuranAmount,
         "status": "belum",
+        "notifTerkirim": false,
         "jatuhTempo": Timestamp.fromDate(jatuhTempo),
         "createdAt": FieldValue.serverTimestamp(),
         "updatedAt": FieldValue.serverTimestamp(),
@@ -185,5 +187,157 @@ class IuranService {
       );
       rethrow;
     }
+  }
+
+  Future<void> kirimTagihan({
+    required String nama,
+    required String hp,
+    required String bulan,
+    required int tahun,
+    required num jumlah,
+  }) async {
+    await WhatsappService.sendMessage(
+      phone: hp,
+      message:
+          '''
+Halo $nama 👋
+
+📌 Tagihan Iuran:
+Bulan: $bulan $tahun
+Jumlah: Rp $jumlah
+
+Mohon segera melakukan pembayaran 🙏
+''',
+    );
+  }
+
+  Future<int> kirimTagihanBulanIniManual() async {
+    final now = DateTime.now();
+    final bulan = BulanUtil.toStringMonth(now.month);
+    final tahun = now.year;
+
+    final iuranSnapshot = await _firestore
+        .collection("iuran")
+        .where("bulan", isEqualTo: bulan)
+        .where("tahun", isEqualTo: tahun)
+        .get();
+
+    final wargaSnapshot = await _firestore.collection("warga").get();
+
+    final Map<String, Map<String, dynamic>> wargaMap = {
+      for (var w in wargaSnapshot.docs) w.id: w.data(),
+    };
+
+    WriteBatch batch = _firestore.batch();
+    int sent = 0;
+
+    for (var doc in iuranSnapshot.docs) {
+      final data = doc.data();
+
+      /// ❌ skip kalau sudah lunas
+      if (data['status'] == 'lunas') continue;
+
+      /// ❌ skip kalau sudah pernah dikirim
+      if (data['notifTerkirim'] == true) continue;
+
+      final warga = wargaMap[data['wargaId']];
+      if (warga == null) continue;
+
+      final nama = warga['nama'] ?? '';
+      final hp = warga['hp'] ?? '';
+
+      if (hp.isEmpty) continue;
+
+      try {
+        await kirimTagihan(
+          nama: nama,
+          hp: hp,
+          bulan: bulan,
+          tahun: tahun,
+          jumlah: data['jumlah'],
+        );
+
+        /// tandai sudah dikirim
+        batch.update(doc.reference, {
+          "notifTerkirim": true,
+          "updatedAt": FieldValue.serverTimestamp(),
+        });
+
+        sent++;
+
+        /// delay biar aman dari limit WA API
+        await Future.delayed(const Duration(seconds: 2));
+      } catch (e) {
+        _log("Gagal kirim ke $nama: $e");
+      }
+    }
+
+    await batch.commit();
+
+    return sent;
+  }
+
+  Future<void> kirimTagihanBulananOtomatis() async {
+    final now = DateTime.now();
+    final bulan = BulanUtil.toStringMonth(now.month);
+    final tahun = now.year;
+
+    /// 🔥 ambil hanya bulan ini + belum dikirim
+    final iuranSnapshot = await _firestore
+        .collection("iuran")
+        .where("bulan", isEqualTo: bulan)
+        .where("tahun", isEqualTo: tahun)
+        .where("notifTerkirim", isEqualTo: false)
+        .get();
+
+    final wargaSnapshot = await _firestore.collection("warga").get();
+
+    final Map<String, Map<String, dynamic>> wargaMap = {
+      for (var w in wargaSnapshot.docs) w.id: w.data(),
+    };
+
+    WriteBatch batch = _firestore.batch();
+    int sent = 0;
+
+    for (var doc in iuranSnapshot.docs) {
+      final data = doc.data();
+
+      /// skip kalau sudah lunas
+      if (data['status'] == 'lunas') continue;
+
+      final warga = wargaMap[data['wargaId']];
+      if (warga == null) continue;
+
+      final nama = warga['nama'] ?? '';
+      final hp = warga['hp'] ?? '';
+
+      if (hp.isEmpty) continue;
+
+      try {
+        await kirimTagihan(
+          nama: nama,
+          hp: hp,
+          bulan: bulan,
+          tahun: tahun,
+          jumlah: data['jumlah'],
+        );
+
+        /// 🔥 tandai sudah kirim
+        batch.update(doc.reference, {
+          "notifTerkirim": true,
+          "updatedAt": FieldValue.serverTimestamp(),
+        });
+
+        sent++;
+
+        await Future.delayed(const Duration(seconds: 2));
+      } catch (e) {
+        _log("Gagal kirim ke $nama: $e");
+      }
+    }
+
+    await batch.commit();
+
+    _log("Berhasil kirim $sent tagihan bulan $bulan");
   }
 }

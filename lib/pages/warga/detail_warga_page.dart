@@ -14,12 +14,32 @@ class DetailWargaPage extends StatelessWidget {
 
   final bulanUtil = ListBulanIuran();
 
+  Future<Map<String, dynamic>> _loadInitialData() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) throw Exception("User belum login");
+
+    final wargaSnap = await FirebaseFirestore.instance
+        .collection('warga')
+        .doc(wargaId)
+        .get();
+
+    final userSnap = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
+
+    return {
+      'warga': wargaSnap.data(),
+      'role': (userSnap.data()?['role'] ?? 'warga').toString().toLowerCase(),
+    };
+  }
+
   Future<void> _deleteWarga(BuildContext context) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (_) => AlertDialog(
         title: const Text("Hapus Warga"),
-        content: const Text("Apakah yakin ingin menghapus warga ini?"),
+        content: const Text("Yakin ingin menghapus warga ini?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -41,131 +61,193 @@ class DetailWargaPage extends StatelessWidget {
           .doc(wargaId)
           .delete();
 
+      await FirebaseFirestore.instance
+          .collection("users")
+          .doc(wargaId)
+          .delete();
+
       await LogService().logEvent(
         action: 'hapus_warga',
         target: 'warga',
-        detail: 'Hapus data warga id=$wargaId',
+        detail: 'Hapus warga id=$wargaId',
       );
 
       if (context.mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Data warga berhasil dihapus")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Warga berhasil dihapus")));
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text("Gagal menghapus: $e")));
+        ).showSnackBar(SnackBar(content: Text("Error: $e")));
       }
     }
   }
 
-  Widget _buildInfo(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(child: Text(value)),
-        ],
+  @override
+  Widget build(BuildContext context) {
+    final iuranStream = FirebaseFirestore.instance
+        .collection('iuran')
+        .where('wargaId', isEqualTo: wargaId)
+        .snapshots();
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Detail Warga')),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _loadInitialData(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final wargaData = snapshot.data!['warga'] as Map<String, dynamic>?;
+          final role = snapshot.data!['role'] as String;
+
+          if (wargaData == null) {
+            return const Center(child: Text("Data tidak ditemukan"));
+          }
+
+          return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: iuranStream,
+            builder: (context, iuranSnapshot) {
+              if (!iuranSnapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final docs = iuranSnapshot.data!.docs;
+
+              final totalBayar = docs.fold<num>(0, (total, doc) {
+                final data = doc.data();
+                if (data['status'] != 'lunas') return total;
+                return total + ((data['jumlah'] as num?) ?? 0);
+              });
+
+              final totalTransaksi = docs
+                  .where((e) => e.data()['status'] == 'lunas')
+                  .length;
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _cardWarga(wargaData),
+                    const SizedBox(height: 16),
+                    _cardSummary(totalBayar, totalTransaksi),
+                    const SizedBox(height: 16),
+                    _rekapCard(docs, role, context),
+                    const SizedBox(height: 20),
+                    _actionButtons(context),
+                  ],
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }
 
-  Widget _buildRekapCard(
+  Widget _cardWarga(Map<String, dynamic> data) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            const Icon(Icons.person, size: 70),
+            const SizedBox(height: 10),
+            Text(
+              data['nama'] ?? '-',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const Divider(),
+            _info('Rumah', data['rumah']),
+            _info('HP', data['hp']),
+            _info('Status', data['status']),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _cardSummary(num total, int transaksi) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _summary('Total', bulanUtil.formatRupiah(total)),
+            _summary('Transaksi', transaksi.toString()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _rekapCard(
     List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
     String role,
     BuildContext context,
   ) {
+    final canPay = [
+      'admin',
+      'ketua',
+      'bendahara',
+      'sekertaris',
+      'petugas',
+    ].contains(role);
+
     final now = DateTime.now();
     final tahunList = docs.isEmpty
         ? [now.year]
         : bulanUtil.getTahunFromIuran(docs);
     final rekap = bulanUtil.buildRekapFromIuran(docs, tahunList);
-    final canPay = {
-      'admin',
-      'ketua',
-      'bendahara',
-      'sekretaris',
-      'petugas',
-    }.contains(role);
 
     return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            const Text(
-              "Rekap Pembayaran",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            const SizedBox(height: 12),
+            const Text("Rekap Pembayaran"),
+            const SizedBox(height: 10),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
                 columns: [
                   const DataColumn(label: Text("Bulan")),
-                  ...tahunList.map(
-                    (tahun) => DataColumn(label: Text('$tahun')),
-                  ),
+                  ...tahunList.map((t) => DataColumn(label: Text('$t'))),
                   if (canPay) const DataColumn(label: Text("Aksi")),
                 ],
                 rows: bulanUtil.bulanList.map((bulan) {
-                  final unpaidDocs =
-                      docs.where((doc) {
-                        final data = doc.data();
-                        return data['bulan'] == bulan &&
-                            data['status'] != 'lunas';
-                      }).toList()..sort(
-                        (a, b) => ((a.data()['tahun'] as int?) ?? now.year)
-                            .compareTo((b.data()['tahun'] as int?) ?? now.year),
-                      );
+                  final unpaid = docs
+                      .where(
+                        (d) =>
+                            d.data()['bulan'] == bulan &&
+                            d.data()['status'] != 'lunas',
+                      )
+                      .toList();
 
                   return DataRow(
                     cells: [
                       DataCell(Text(bulan)),
                       ...tahunList.map((tahun) {
-                        final value = rekap[bulan]?[tahun];
-                        final isLunas = value != null && value != 'Belum';
-                        return DataCell(
-                          value == null
-                              ? const Text(
-                                  'Belum',
-                                  style: TextStyle(color: Colors.red),
-                                )
-                              : Text(
-                                  value,
-                                  style: TextStyle(
-                                    color: isLunas ? Colors.green : Colors.red,
-                                  ),
-                                ),
-                        );
+                        final val = rekap[bulan]?[tahun];
+                        return DataCell(Text(val ?? 'Belum'));
                       }),
                       if (canPay)
                         DataCell(
-                          unpaidDocs.isEmpty
-                              ? const Text(
-                                  'Lunas',
-                                  style: TextStyle(color: Colors.green),
-                                )
+                          unpaid.isEmpty
+                              ? const Text('Lunas')
                               : ElevatedButton(
                                   onPressed: () =>
-                                      _handleBayar(context, bulan, unpaidDocs),
-                                  child: Text(
-                                    unpaidDocs.length > 1
-                                        ? 'Bayar (${unpaidDocs.length})'
-                                        : 'Bayar',
-                                  ),
+                                      _handleBayar(context, bulan, unpaid),
+                                  child: const Text('Bayar'),
                                 ),
                         ),
                     ],
@@ -182,52 +264,12 @@ class DetailWargaPage extends StatelessWidget {
   Future<void> _handleBayar(
     BuildContext context,
     String bulan,
-    List<QueryDocumentSnapshot<Map<String, dynamic>>> unpaidDocs,
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
   ) async {
-    if (unpaidDocs.isEmpty) return;
+    if (docs.isEmpty) return;
 
-    final selectedDoc = unpaidDocs.length == 1
-        ? unpaidDocs.first
-        : await showDialog<QueryDocumentSnapshot<Map<String, dynamic>>>(
-            context: context,
-            builder: (dialogContext) => SimpleDialog(
-              title: Text('Pilih tunggakan $bulan yang akan dibayar'),
-              children: unpaidDocs.map((doc) {
-                final tahun =
-                    (doc.data()['tahun'] as int?) ?? DateTime.now().year;
-                final jumlah = (doc.data()['jumlah'] as num?) ?? 0;
-                return SimpleDialogOption(
-                  onPressed: () => Navigator.pop(dialogContext, doc),
-                  child: Text(
-                    '$bulan $tahun • ${bulanUtil.formatRupiah(jumlah)}',
-                  ),
-                );
-              }).toList(),
-            ),
-          );
-
-    if (selectedDoc == null) return;
-
-    final tahun = (selectedDoc.data()['tahun'] as int?) ?? DateTime.now().year;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Konfirmasi Pembayaran'),
-        content: Text('Tandai iuran $bulan $tahun sebagai lunas?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Bayar'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
+    final doc = docs.first;
+    final tahun = doc.data()['tahun'] ?? DateTime.now().year;
 
     try {
       await IuranService().bayarIuranWarga(
@@ -236,211 +278,56 @@ class DetailWargaPage extends StatelessWidget {
         tahun: tahun,
       );
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Pembayaran iuran $bulan $tahun berhasil.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Berhasil bayar $bulan $tahun')));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memproses pembayaran: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    final wargaRef = FirebaseFirestore.instance
-        .collection('warga')
-        .doc(wargaId);
-    final iuranRef = FirebaseFirestore.instance
-        .collection('iuran')
-        .where('wargaId', isEqualTo: wargaId);
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Detail Warga')),
-      body: FutureBuilder<List<DocumentSnapshot>>(
-        future: Future.wait([
-          wargaRef.get(),
-          FirebaseFirestore.instance.collection('users').doc(uid).get(),
-        ]),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Gagal memuat data: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final wargaSnap = snapshot.data![0];
-          final wargaData = wargaSnap.data() as Map<String, dynamic>?;
-          if (wargaData == null) {
-            return const Center(child: Text('Data warga tidak ditemukan.'));
-          }
-
-          return FutureBuilder<DocumentSnapshot>(
-            future: FirebaseFirestore.instance
-                .collection('users')
-                .doc(uid)
-                .get(),
-            builder: (context, userSnapshot) {
-              if (!userSnapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final userData =
-                  userSnapshot.data!.data() as Map<String, dynamic>?;
-              final role = (userData?['role'] ?? 'warga')
-                  .toString()
-                  .toLowerCase()
-                  .trim();
-
-              return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: iuranRef.snapshots(),
-                builder: (context, iuranSnapshot) {
-                  if (iuranSnapshot.hasError) {
-                    return Center(
-                      child: Text(
-                        'Gagal memuat riwayat pembayaran: ${iuranSnapshot.error}',
-                      ),
-                    );
-                  }
-                  if (!iuranSnapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  final iuranDocs = iuranSnapshot.data!.docs;
-                  final totalBayar = iuranDocs.fold<num>(0, (sum, doc) {
-                    final data = doc.data();
-                    if (data['status'] != 'lunas') return sum;
-                    return sum + ((data['jumlah'] as num?) ?? 0);
-                  });
-                  final totalTransaksiLunas = iuranDocs
-                      .where((doc) => doc.data()['status'] == 'lunas')
-                      .length;
-
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 3,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              children: [
-                                const Icon(Icons.person, size: 70),
-                                const SizedBox(height: 10),
-                                Text(
-                                  wargaData['nama'] ?? '-',
-                                  style: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const Divider(height: 30),
-                                _buildInfo(
-                                  'Nomor Rumah',
-                                  wargaData['rumah'] ?? '-',
-                                ),
-                                _buildInfo('No HP', wargaData['hp'] ?? '-'),
-                                _buildInfo(
-                                  'Status Rumah',
-                                  wargaData['status'] ?? '-',
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 3,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              children: [
-                                const Text(
-                                  'Ringkasan Iuran',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceAround,
-                                  children: [
-                                    _summaryItem(
-                                      'Total Bayar',
-                                      bulanUtil.formatRupiah(totalBayar),
-                                    ),
-                                    _summaryItem(
-                                      'Transaksi',
-                                      totalTransaksiLunas.toString(),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildRekapCard(iuranDocs, role, context),
-                        const SizedBox(height: 20),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            ElevatedButton.icon(
-                              icon: const Icon(Icons.edit),
-                              label: const Text('Edit'),
-                              onPressed: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      AddWargaPage(wargaId: wargaId),
-                                ),
-                              ),
-                            ),
-                            ElevatedButton.icon(
-                              icon: const Icon(Icons.delete),
-                              label: const Text('Hapus'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                              ),
-                              onPressed: () => _deleteWarga(context),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
-          );
-        },
-      ),
+  Widget _actionButtons(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        ElevatedButton.icon(
+          icon: const Icon(Icons.edit),
+          label: const Text('Edit'),
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => AddWargaPage(wargaId: wargaId)),
+          ),
+        ),
+        ElevatedButton.icon(
+          icon: const Icon(Icons.delete),
+          label: const Text('Hapus'),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          onPressed: () => _deleteWarga(context),
+        ),
+      ],
     );
   }
 
-  Widget _summaryItem(String label, String value) {
+  Widget _info(String label, dynamic value) {
+    return Row(
+      children: [
+        SizedBox(width: 100, child: Text(label)),
+        Expanded(child: Text(value ?? '-')),
+      ],
+    );
+  }
+
+  Widget _summary(String label, String value) {
     return Column(
       children: [
         Text(label),
         const SizedBox(height: 5),
-        Text(
-          value,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
       ],
     );
   }

@@ -1,9 +1,8 @@
-// File: lib/pages/laporan/laporan_page.dart (Refactor Total)
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../../services/log_service.dart';
+import 'export_laporan_page.dart';
 
 class LaporanPage extends StatefulWidget {
   const LaporanPage({super.key});
@@ -16,13 +15,10 @@ class _LaporanPageState extends State<LaporanPage> {
   final ScrollController _horizontalScrollController = ScrollController();
   final ScrollController _verticalScrollController = ScrollController();
 
-  DateTime? _selectedDate; // Untuk filter bulan/tahun
-  String _filterType = 'Detail'; // 'Detail', 'Bulanan', 'Tahunan'
-
-  // List untuk menyimpan ID transaksi yang dipilih untuk aksi (checkbox)
+  DateTime? _selectedDate;
+  String _filterType = 'Detail';
   final List<String> _selectedTransactionIds = [];
 
-  // --- Fungsi untuk memilih bulan/tahun ---
   Future<void> _pickMonthYear(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -36,13 +32,11 @@ class _LaporanPageState extends State<LaporanPage> {
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
-        // Default ke bulanan jika tanggal dipilih, user bisa ganti ke Tahunan
         if (_filterType == 'Global') _filterType = 'Bulanan';
       });
     }
   }
 
-  // --- Fungsi untuk mengformat Rupiah ---
   String formatRupiah(num number) {
     final formatter = NumberFormat.currency(
       locale: 'id_ID',
@@ -52,7 +46,6 @@ class _LaporanPageState extends State<LaporanPage> {
     return formatter.format(number);
   }
 
-  // --- Fungsi untuk meng-update status bendahara transaksi terpilih ---
   Future<void> _approveSelectedTransactions() async {
     if (_selectedTransactionIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -63,7 +56,6 @@ class _LaporanPageState extends State<LaporanPage> {
       return;
     }
 
-    // Konfirmasi sebelum eksekusi
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -125,7 +117,66 @@ class _LaporanPageState extends State<LaporanPage> {
     }
   }
 
-  // --- Konstanta untuk styling tabel ---
+  /// Ambil data transaksi sesuai filter + hitung saldo berjalan
+  Future<List<Map<String, dynamic>>> getTransactions() async {
+    Query transactionQuery = FirebaseFirestore.instance.collection("transaksi");
+
+    if (_filterType == 'Bulanan' && _selectedDate != null) {
+      final startOfMonth = DateTime(
+        _selectedDate!.year,
+        _selectedDate!.month,
+        1,
+      );
+      final endOfMonth = DateTime(
+        _selectedDate!.year,
+        _selectedDate!.month + 1,
+        0,
+        23,
+        59,
+        59,
+      );
+      transactionQuery = transactionQuery
+          .where('tanggal', isGreaterThanOrEqualTo: startOfMonth)
+          .where('tanggal', isLessThanOrEqualTo: endOfMonth);
+    } else if (_filterType == 'Tahunan' && _selectedDate != null) {
+      final startOfYear = DateTime(_selectedDate!.year, 1, 1);
+      final endOfYear = DateTime(_selectedDate!.year, 12, 31, 23, 59, 59);
+      transactionQuery = transactionQuery
+          .where('tanggal', isGreaterThanOrEqualTo: startOfYear)
+          .where('tanggal', isLessThanOrEqualTo: endOfYear);
+    }
+
+    final snapshot = await transactionQuery.orderBy('tanggal').get();
+
+    List<Map<String, dynamic>> allTransactions = [];
+    for (var doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      allTransactions.add({
+        'id': doc.id,
+        'tanggal': data['tanggal'],
+        'jenis': data['jenis'] ?? 'masuk',
+        'jumlah': data['jumlah'] ?? 0,
+        'dari': data['dari'] ?? '-',
+        'penerima': data['penerima'] ?? '-',
+        'keterangan': data['keterangan'] ?? '-',
+        'statusBendahara': data['statusBendahara'] ?? 'menunggu',
+      });
+    }
+
+    double currentBalance = 0.0;
+    List<Map<String, dynamic>> transactionsWithBalance = [];
+    for (var trx in allTransactions) {
+      if (trx['jenis'] == 'masuk') {
+        currentBalance += (trx['jumlah'] as num).toDouble();
+      } else {
+        currentBalance -= (trx['jumlah'] as num).toDouble();
+      }
+      transactionsWithBalance.add({...trx, 'currentBalance': currentBalance});
+    }
+
+    return transactionsWithBalance;
+  }
+
   static const EdgeInsets _tableCellPadding = EdgeInsets.all(8.0);
   static const double _colWidthNo = 50.0;
   static const double _colWidthTanggal = 100.0;
@@ -135,7 +186,6 @@ class _LaporanPageState extends State<LaporanPage> {
   static const double _colWidthKeterangan = 200.0;
   static const double _colWidthStatusAksi = 80.0;
 
-  /// HEADER ROW TABLE
   TableRow _buildHeaderRow() {
     return TableRow(
       decoration: BoxDecoration(
@@ -173,7 +223,6 @@ class _LaporanPageState extends State<LaporanPage> {
     );
   }
 
-  /// DATA ROW TABLE
   TableRow _buildDataRow(
     int index,
     Map<String, dynamic> transaction,
@@ -189,7 +238,6 @@ class _LaporanPageState extends State<LaporanPage> {
     final bool isSelected = _selectedTransactionIds.contains(trxId);
     final bool isApproved = statusBendahara == 'diterima';
 
-    // Format tanggal
     Timestamp? ts = transaction['tanggal'] as Timestamp?;
     DateTime? tanggal = ts?.toDate();
     String tanggalFormatted = tanggal != null
@@ -198,9 +246,7 @@ class _LaporanPageState extends State<LaporanPage> {
 
     return TableRow(
       decoration: BoxDecoration(
-        color: index.isEven
-            ? Colors.grey.shade50
-            : Colors.white, // Zebra stripe
+        color: index.isEven ? Colors.grey.shade50 : Colors.white,
       ),
       children: [
         Padding(
@@ -251,13 +297,10 @@ class _LaporanPageState extends State<LaporanPage> {
         Padding(
           padding: _tableCellPadding,
           child: Checkbox(
-            value:
-                isSelected ||
-                isApproved, // Jika sudah diterima, checkbox juga aktif
+            value: isSelected || isApproved,
             onChanged: isApproved
                 ? null
                 : (bool? newValue) {
-                    // Tidak bisa mengubah jika sudah diterima
                     setState(() {
                       if (newValue == true) {
                         _selectedTransactionIds.add(trxId);
@@ -310,6 +353,32 @@ class _LaporanPageState extends State<LaporanPage> {
         title: const Text("Laporan Keuangan"),
         actions: [
           IconButton(
+            icon: const Icon(Icons.file_download),
+            tooltip: 'Export Laporan',
+            onPressed: () async {
+              final data = await getTransactions();
+              if (!context.mounted) return;
+              if (data.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Tidak ada data untuk di-export'),
+                  ),
+                );
+                return;
+              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ExportLaporanPage(
+                    transactions: data,
+                    filterType: _filterType,
+                    selectedDate: _selectedDate,
+                  ),
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.check_circle_outline),
             tooltip: 'Setujui Transaksi Terpilih',
             onPressed: _approveSelectedTransactions,
@@ -321,7 +390,7 @@ class _LaporanPageState extends State<LaporanPage> {
                 if (value == 'Bulanan' || value == 'Tahunan') {
                   _pickMonthYear(context);
                 } else {
-                  _selectedDate = null; // Clear selected date for Global
+                  _selectedDate = null;
                 }
               });
             },
@@ -365,7 +434,7 @@ class _LaporanPageState extends State<LaporanPage> {
             allTransactions.add({
               'id': doc.id,
               'tanggal': data['tanggal'],
-              'jenis': data['jenis'] ?? 'masuk', // Default ke masuk jika kosong
+              'jenis': data['jenis'] ?? 'masuk',
               'jumlah': data['jumlah'] ?? 0,
               'dari': data['dari'] ?? '-',
               'penerima': data['penerima'] ?? '-',
@@ -374,7 +443,6 @@ class _LaporanPageState extends State<LaporanPage> {
             });
           }
 
-          // Hitung saldo berjalan
           double currentBalance = 0.0;
           List<Map<String, dynamic>> transactionsWithBalance = [];
           for (var trx in allTransactions) {
@@ -397,7 +465,6 @@ class _LaporanPageState extends State<LaporanPage> {
 
           return Column(
             children: [
-              // Menampilkan filter yang aktif
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Text(

@@ -12,7 +12,7 @@ import 'package:universal_html/html.dart' as html;
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'users_service.dart';
-import 'auth_service.dart';
+import 'whatsapp_service.dart';
 
 class ExportImportService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -72,13 +72,7 @@ class ExportImportService {
       }
 
       final excel = Excel.createExcel();
-
-      // 🔥 hapus default sheet dengan aman
-      final defaultSheet = excel.getDefaultSheet();
-      if (defaultSheet != null) {
-        excel.delete(defaultSheet);
-      }
-
+      excel.delete('Sheet1');
       final sheet = excel['Data Warga'];
 
       // Header
@@ -279,209 +273,243 @@ class ExportImportService {
   // ==============================================
   //           IMPORT WARGA DARI EXCEL
   // ==============================================
+  // ==============================================
+  //           IMPORT WARGA DARI EXCEL (REFACTOR)
+  // ==============================================
   static Future<void> importWargaFromExcel(BuildContext context) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Memulai import data...'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Memulai import data...')));
 
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['xlsx'],
-        withData: true, // 🔥 penting untuk web
+        withData: true,
       );
 
       if (result == null || result.files.single.bytes == null) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pemilihan file dibatalkan.')),
+          const SnackBar(content: Text('Pemilihan file dibatalkan')),
         );
         return;
       }
-      final existingWargaSnapshot = await _db.collection('warga').get();
 
-      Map<String, DocumentReference> rumahMap = {};
-
-      for (var doc in existingWargaSnapshot.docs) {
-        final data = doc.data();
-        final rumah = (data['rumah'] ?? '').toString().toUpperCase();
-
-        if (rumah.isNotEmpty) {
-          rumahMap[rumah] = doc.reference;
-        }
-      }
-      // ✅ Ambil bytes (support semua platform)
       final bytes = result.files.single.bytes!;
       final excel = Excel.decodeBytes(bytes);
 
-      int importedCount = 0;
-      List<String> failedRows = [];
+      final existingSnapshot = await _db.collection('warga').get();
 
-      WriteBatch batch = _db.batch();
+      /// 🔥 Map rumah untuk deteksi duplikat
+      final Map<String, DocumentReference> rumahMap = {
+        for (var doc in existingSnapshot.docs)
+          (doc.data()['rumah'] ?? '').toString().toUpperCase(): doc.reference,
+      };
 
-      // 🔥 Simpan data untuk create user setelah batch commit
-      List<Map<String, dynamic>> importedUsers = [];
+      final batch = _db.batch();
+
+      int successCount = 0;
+      final List<String> failedRows = [];
+
+      /// 🔥 simpan data user setelah commit
+      final List<Map<String, dynamic>> usersToCreate = [];
 
       for (var table in excel.tables.keys) {
-        var sheet = excel.tables[table];
-        if (sheet == null || sheet.maxRows == 0) continue;
+        final sheet = excel.tables[table];
+        if (sheet == null) continue;
 
         for (int i = 1; i < sheet.maxRows; i++) {
-          var row = sheet.row(i);
+          final row = sheet.row(i);
 
-          // Skip baris kosong
-          if (row.every(
-            (cell) =>
-                cell == null ||
-                cell.value == null ||
-                cell.value.toString().trim().isEmpty,
-          )) {
-            continue;
-          }
+          if (_isRowEmpty(row)) continue;
 
           try {
-            String nama = row[1]?.value?.toString().trim() ?? '';
-            String rumah = row[2]?.value?.toString().trim() ?? '';
-            String hp = row[3]?.value?.toString().trim() ?? '';
-            String status = row[4]?.value?.toString().trim() ?? '';
-            String roleString =
-                row[5]?.value?.toString().trim().toLowerCase() ?? 'warga';
-            String tanggalBergabung = row[6]?.value?.toString().trim() ?? '';
+            final nama = _safeString(row, 1);
+            final rumahRaw = _safeString(row, 2);
+            final hp = _safeString(row, 3);
+            final status = _safeString(row, 4);
+            final role = _safeString(row, 5).toLowerCase();
+            final tanggal = _safeString(row, 6);
 
-            // ✅ Validasi
-            if (nama.isEmpty || rumah.isEmpty) {
-              failedRows.add('Baris ${i + 1}: Nama atau Rumah kosong.');
+            if (nama.isEmpty || rumahRaw.isEmpty) {
+              failedRows.add('Baris ${i + 1}: Nama/Rumah kosong');
               continue;
             }
 
-            if (hp.isNotEmpty && !RegExp(r'^[0-9+() -]+$').hasMatch(hp)) {
-              failedRows.add('Baris ${i + 1}: Format HP tidak valid.');
+            if (hp.isNotEmpty && !_isValidHp(hp)) {
+              failedRows.add('Baris ${i + 1}: HP tidak valid');
               continue;
             }
 
-            // ✅ Role parsing
-            UserRole userRole = UserRole.values.firstWhere(
-              (e) => e.toString().split('.').last == roleString,
-              orElse: () => UserRole.warga,
-            );
+            /// 🔥 NORMALISASI RUMAH (SAMA DENGAN AddWargaPage)
+            final rumahData = _generateRumahData(rumahRaw);
+            final rumah = rumahData['rumah'];
+            final blok = rumahData['blok'];
+            final nomor = rumahData['nomor'];
 
-            // 🔥 Buat doc ref dulu biar dapat ID
-            final rumahUpper = rumah.toUpperCase();
             final wargaData = {
               'nama': nama,
-              'rumah': rumahUpper,
+              'rumah': rumah,
+              'blok': blok,
+              'nomor': nomor,
               'hp': hp,
               'status': status,
-              'role': userRole.toString().split('.').last,
-              'tanggalBergabung': tanggalBergabung,
+              'role': role.isEmpty ? 'warga' : role,
+              'tanggalBergabung': tanggal,
               'updatedAt': FieldValue.serverTimestamp(),
             };
 
-            if (rumahMap.containsKey(rumahUpper)) {
-              // 🔥 UPDATE
-              final existingRef = rumahMap[rumahUpper]!;
+            DocumentReference ref;
 
-              batch.update(existingRef, wargaData);
-
-              importedUsers.add({
-                'wargaId': existingRef.id,
-                'nama': nama,
-                'rumah': rumahUpper,
-                'hp': hp,
-                'role': userRole.toString().split('.').last,
-              });
+            if (rumahMap.containsKey(rumah)) {
+              /// UPDATE
+              ref = rumahMap[rumah]!;
+              batch.update(ref, wargaData);
             } else {
-              // 🔥 CREATE
-              final newRef = _db.collection('warga').doc();
-
-              batch.set(newRef, {
+              /// CREATE
+              ref = _db.collection('warga').doc();
+              batch.set(ref, {
                 ...wargaData,
                 'createdAt': FieldValue.serverTimestamp(),
               });
 
-              rumahMap[rumahUpper] = newRef;
-
-              importedUsers.add({
-                'wargaId': newRef.id,
-                'nama': nama,
-                'rumah': rumahUpper,
-                'hp': hp,
-                'role': userRole.toString().split('.').last,
-              });
+              rumahMap[rumah] = ref;
             }
 
-            importedCount++;
-          } catch (e, st) {
-            failedRows.add('Baris ${i + 1}: Error ($e)');
-            debugPrint('Row error ${i + 1}: $e \n $st');
+            /// 🔥 simpan untuk create login
+            usersToCreate.add({
+              'wargaId': ref.id,
+              'nama': nama,
+              'rumah': rumah,
+              'hp': hp,
+              'role': wargaData['role'],
+            });
+
+            successCount++;
+          } catch (e) {
+            failedRows.add('Baris ${i + 1}: Error $e');
           }
         }
-        break; // hanya sheet pertama
+
+        break;
       }
 
-      // ✅ Commit semua warga dulu
+      /// ✅ Commit warga dulu
       await batch.commit();
 
-      // =========================================
-      // 🔥 CREATE USER LOGIN (SETELAH WARGA MASUK)
-      // =========================================
-      for (var user in importedUsers) {
+      /// =========================================
+      /// 🔥 CREATE / UPDATE USER LOGIN
+      /// =========================================
+      int userSuccess = 0;
+
+      const defaultPassword = '123456';
+
+      for (final user in usersToCreate) {
         try {
-          final identifier =
-              (user['hp'] != null && user['hp'].toString().isNotEmpty)
-              ? user['hp']
-              : user['rumah'];
+          final nama = user['nama'];
+          final hp = user['hp'];
+          final rumah = user['rumah'];
+
+          final identifier = _resolveIdentifier(hp, rumah);
+          final email = '$identifier@mulialand.com';
 
           await upsertUserLogin(
             wargaId: user['wargaId'],
-            nama: user['nama'],
-            rumah: user['rumah'],
-            hp: user['hp'],
+            nama: nama,
+            rumah: rumah,
+            hp: hp,
             role: user['role'],
             identifier: identifier,
-            newRawPassword: '123456', // 🔥 default password
+            newRawPassword: defaultPassword,
           );
+
+          /// 🔥 AUTO KIRIM WA
+          if (hp != null && hp.toString().isNotEmpty) {
+            await WhatsappService.sendMessage(
+              phone: hp,
+              message:
+                  '''
+Halo Bapak/Ibu $nama
+
+Akun Anda telah dibuat.
+Untuk mengetahui Informasi pembayaran iuran Anda dan
+Keadaan keuangan di Perumahan kita tercinta ini.
+
+  Login:
+Email: $email
+Password: $defaultPassword
+
+Silakan login dan segera ganti password.
+Jika ada pertanyaan jangan sungkan untuk menghubungi kami baik di Group atau DM langsung.
+
+Terima kasih
+Pengurus Perumahan Mulia Land Patria. 
+''',
+            );
+
+            /// 🔥 biar gak dianggap spam
+            await Future.delayed(const Duration(milliseconds: 1000));
+          }
         } catch (e) {
-          debugPrint('User create error: $e');
+          debugPrint('Error: $e');
         }
       }
 
-      // =========================================
-      // 🔔 NOTIFIKASI
-      // =========================================
-      String message = 'Berhasil mengimpor $importedCount warga.';
+      /// =========================================
+      /// 🔔 NOTIFIKASI
+      /// =========================================
+      String message =
+          'Import selesai:\n'
+          '- Warga: $successCount\n'
+          '- User login: $userSuccess';
 
       if (failedRows.isNotEmpty) {
-        message += '\n${failedRows.length} baris gagal:';
-        for (int i = 0; i < failedRows.length && i < 3; i++) {
-          message += '\n- ${failedRows[i]}';
-        }
-        if (failedRows.length > 3) {
-          message += '\n...dan ${failedRows.length - 3} lainnya.';
-        }
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            duration: const Duration(seconds: 10),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      } else {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
+        message += '\nGagal: ${failedRows.length} baris';
       }
-    } catch (e, st) {
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 6)),
+      );
+    } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Gagal import Excel: $e')));
-      debugPrint('Import Excel Error: $e \n $st');
+      ).showSnackBar(SnackBar(content: Text('Gagal import: $e')));
     }
+  }
+
+  static bool _isRowEmpty(List<Data?> row) {
+    return row.every(
+      (cell) =>
+          cell == null ||
+          cell.value == null ||
+          cell.value.toString().trim().isEmpty,
+    );
+  }
+
+  static String _safeString(List<Data?> row, int index) {
+    if (index >= row.length) return '';
+    return row[index]?.value?.toString().trim() ?? '';
+  }
+
+  static bool _isValidHp(String hp) {
+    return RegExp(r'^[0-9+() -]+$').hasMatch(hp);
+  }
+
+  static String _resolveIdentifier(String hp, String rumah) {
+    return hp.isNotEmpty ? hp : rumah;
+  }
+
+  static Map<String, dynamic> _generateRumahData(String rumah) {
+    final upper = rumah.toUpperCase();
+
+    final huruf = upper.replaceAll(RegExp(r'[^A-Z]'), '');
+    final angkaStr = upper.replaceAll(RegExp(r'[^0-9]'), '');
+    final angka = int.tryParse(angkaStr) ?? 0;
+    final angkaFormatted = angka.toString().padLeft(2, '0');
+
+    return {'rumah': '$huruf$angkaFormatted', 'blok': huruf, 'nomor': angka};
   }
 }

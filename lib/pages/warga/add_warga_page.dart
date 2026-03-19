@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/log_service.dart';
+import '../../services/whatsapp_service.dart';
 import '../../services/users_service.dart';
 
 class AddWargaPage extends StatefulWidget {
@@ -14,10 +15,10 @@ class AddWargaPage extends StatefulWidget {
 
 class _AddWargaPageState extends State<AddWargaPage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _namaController = TextEditingController();
-  final TextEditingController _rumahController = TextEditingController();
-  final TextEditingController _hpController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final _namaController = TextEditingController();
+  final _rumahController = TextEditingController();
+  final _hpController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   String? _selectedStatus;
   String _selectedRole = 'warga';
@@ -50,9 +51,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
   }
 
   Future<void> _loadWargaData() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final doc = await FirebaseFirestore.instance
@@ -61,66 +60,66 @@ class _AddWargaPageState extends State<AddWargaPage> {
           .get();
 
       if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>;
+        final data = doc.data()!;
         _namaController.text = data['nama'] ?? '';
         _rumahController.text = data['rumah'] ?? '';
         _hpController.text = data['hp'] ?? '';
-        _selectedStatus = data['status'] ?? _statusOptions.first;
-        _selectedRole = (data['role'] ?? 'warga').toString().toLowerCase();
+        _selectedStatus = data['status'];
+        _selectedRole = (data['role'] ?? 'warga').toLowerCase();
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Gagal memuat data warga: $e')));
+      ).showSnackBar(SnackBar(content: Text('Gagal load: $e')));
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      setState(() => _isLoading = false);
     }
   }
 
   Future<void> _saveWarga() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final nama = _namaController.text.trim();
-      final rumahInput = _rumahController.text.trim();
-      final rumahData = _generateRumahData(rumahInput);
+      final rumahData = _generateRumahData(_rumahController.text.trim());
 
-      final rumah = rumahData['rumah']; // sudah uppercase
+      final rumah = rumahData['rumah'];
       final blok = rumahData['blok'];
       final nomor = rumahData['nomor'];
       final hp = _hpController.text.trim();
+
       final identifier = _resolveIdentifier();
+      final email = "$identifier@mulialand.com";
 
-      final wargaData = <String, dynamic>{
-        'nama': nama,
-        'rumah': rumah,
-        'blok': blok,
-        'nomor': nomor,
-        'hp': hp,
-        'status': _selectedStatus,
-        'role': _selectedRole,
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
+      /// 🔥 pakai password default jika kosong
+      final password = _passwordController.text.trim().isEmpty
+          ? '123456'
+          : _passwordController.text.trim();
 
-      String wargaId = widget.wargaId ?? '';
+      String wargaId;
 
       if (_isEditing) {
-        await FirebaseFirestore.instance
-            .collection('warga')
-            .doc(widget.wargaId)
-            .update(wargaData);
-
+        /// ================= UPDATE =================
         wargaId = widget.wargaId!;
 
+        await FirebaseFirestore.instance
+            .collection('warga')
+            .doc(wargaId)
+            .update({
+              'nama': nama,
+              'rumah': rumah,
+              'blok': blok,
+              'nomor': nomor,
+              'hp': hp,
+              'status': _selectedStatus,
+              'role': _selectedRole,
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+
+        /// 🔥 update user login juga
         await upsertUserLogin(
           wargaId: wargaId,
           nama: nama,
@@ -128,32 +127,35 @@ class _AddWargaPageState extends State<AddWargaPage> {
           hp: hp,
           role: _selectedRole,
           identifier: identifier,
-          newRawPassword: _passwordController.text.trim().isEmpty
-              ? null
-              : _passwordController.text.trim(),
+          newRawPassword: password,
         );
 
         await LogService().logEvent(
           action: 'update_warga',
           target: 'warga',
-          detail: 'Update data warga $nama (id=$wargaId) + sinkron akun login',
+          detail: 'Update warga $nama',
         );
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Warga & akun login berhasil diperbarui!'),
-            ),
-          );
-        }
       } else {
-        wargaData['createdAt'] = FieldValue.serverTimestamp();
-        final ref = await FirebaseFirestore.instance
-            .collection('warga')
-            .add(wargaData);
+        /// ================= CREATE =================
 
-        wargaId = ref.id;
+        /// 🔥 buat ID sendiri (bukan dari auth)
+        final newDoc = FirebaseFirestore.instance.collection('warga').doc();
+        wargaId = newDoc.id;
 
+        /// simpan warga
+        await newDoc.set({
+          'nama': nama,
+          'rumah': rumah,
+          'blok': blok,
+          'nomor': nomor,
+          'hp': hp,
+          'status': _selectedStatus,
+          'role': _selectedRole,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        /// 🔥 buat user login (PUSAT LOGIKA)
         await upsertUserLogin(
           wargaId: wargaId,
           nama: nama,
@@ -161,38 +163,65 @@ class _AddWargaPageState extends State<AddWargaPage> {
           hp: hp,
           role: _selectedRole,
           identifier: identifier,
-          newRawPassword: _passwordController.text.trim(),
+          newRawPassword: password,
         );
 
         await LogService().logEvent(
           action: 'tambah_warga',
           target: 'warga',
-          detail: 'Tambah warga $nama (id=$wargaId) + buat akun login',
+          detail: 'Tambah warga $nama',
         );
+      }
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Warga & akun login berhasil ditambahkan!'),
-            ),
-          );
+      /// =========================================
+      /// 🔥 AUTO KIRIM WHATSAPP
+      /// =========================================
+      if (hp.isNotEmpty) {
+        final message =
+            '''
+Halo Bapak/Ibu $nama
+
+Akun Anda telah dibuat.
+Untuk mengetahui Informasi pembayaran iuran Anda dan keuangan di Perumahan kita tercinta ini
+
+  Login:
+Email: $email
+Password: $password
+
+Silakan login dan segera ganti password.
+Jika ada pertanyaan jangan sungkan untuk menghubungi kami baik di Group atau DM langsung.
+
+Terima kasih
+Pengurus Perumahan Mulia Land Patria. 
+''';
+
+        try {
+          await WhatsappService.sendMessage(phone: hp, message: message);
+        } catch (e) {
+          debugPrint('Gagal kirim WA: $e');
         }
       }
 
+      /// =========================================
+      /// 🔔 NOTIFIKASI
+      /// =========================================
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _isEditing ? 'Berhasil update warga' : 'Berhasil tambah warga',
+            ),
+          ),
+        );
         Navigator.pop(context);
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Gagal menyimpan warga: $e')));
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      setState(() => _isLoading = false);
     }
   }
 
@@ -203,6 +232,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
     final angkaStr = upper.replaceAll(RegExp(r'[^0-9]'), '');
     final angka = int.tryParse(angkaStr) ?? 0;
     final angkaFormatted = angka.toString().padLeft(2, '0');
+
     return {'rumah': '$huruf$angkaFormatted', 'blok': huruf, 'nomor': angka};
   }
 
@@ -218,9 +248,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Warga' : 'Tambah Warga Baru'),
-      ),
+      appBar: AppBar(title: Text(_isEditing ? 'Edit Warga' : 'Tambah Warga')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -230,15 +258,10 @@ class _AddWargaPageState extends State<AddWargaPage> {
               TextFormField(
                 controller: _namaController,
                 decoration: const InputDecoration(
-                  labelText: 'Nama Warga',
+                  labelText: 'Nama',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Nama tidak boleh kosong';
-                  }
-                  return null;
-                },
+                validator: (v) => v!.isEmpty ? 'Nama tidak boleh kosong' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -247,79 +270,38 @@ class _AddWargaPageState extends State<AddWargaPage> {
                   labelText: 'Nomor Rumah',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  final rumahInput = value?.trim() ?? '';
-
-                  if (rumahInput.isEmpty) {
-                    return 'Nomor rumah tidak boleh kosong';
-                  }
-
-                  if (!RegExp(r'^[A-Za-z]+\d+$').hasMatch(rumahInput)) {
-                    return 'Format rumah harus seperti A1, B2, dll';
-                  }
-
-                  return null;
-                },
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _hpController,
                 decoration: const InputDecoration(
-                  labelText: 'Nomor HP (dipakai sebagai identifier login)',
+                  labelText: 'No HP',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if ((value == null || value.trim().isEmpty) &&
-                      _rumahController.text.trim().isEmpty) {
-                    return 'Isi nomor HP atau nomor rumah untuk identifier login';
-                  }
-                  return null;
-                },
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
+              DropdownButtonFormField(
                 initialValue: _selectedStatus,
                 decoration: const InputDecoration(
-                  labelText: 'Status Rumah',
+                  labelText: 'Status',
                   border: OutlineInputBorder(),
                 ),
-                items: _statusOptions.map((status) {
-                  return DropdownMenuItem<String>(
-                    value: status,
-                    child: Text(status),
-                  );
-                }).toList(),
-                onChanged: (newValue) {
-                  setState(() {
-                    _selectedStatus = newValue;
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Status rumah tidak boleh kosong';
-                  }
-                  return null;
-                },
+                items: _statusOptions
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedStatus = v),
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
+              DropdownButtonFormField(
                 initialValue: _selectedRole,
                 decoration: const InputDecoration(
-                  labelText: 'Role Login User',
+                  labelText: 'Role',
                   border: OutlineInputBorder(),
                 ),
-                items: _roleOptions.map((role) {
-                  return DropdownMenuItem<String>(
-                    value: role,
-                    child: Text(role),
-                  );
-                }).toList(),
-                onChanged: (newValue) {
-                  if (newValue == null) return;
-                  setState(() {
-                    _selectedRole = newValue;
-                  });
-                },
+                items: _roleOptions
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedRole = v!),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -327,40 +309,26 @@ class _AddWargaPageState extends State<AddWargaPage> {
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: _isEditing
-                      ? 'Password Baru (opsional, kosongkan jika tidak ganti)'
-                      : 'Password Login User',
+                      ? 'Password baru (opsional)'
+                      : 'Password',
                   border: const OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  final text = value?.trim() ?? '';
-                  if (!_isEditing && text.isEmpty) {
-                    return 'Password wajib diisi';
+                validator: (v) {
+                  if (!_isEditing && (v == null || v.isEmpty)) {
+                    return 'Password wajib';
                   }
-                  if (text.isNotEmpty && text.length < 6) {
-                    return 'Password minimal 6 karakter';
+                  if (v != null && v.isNotEmpty && v.length < 6) {
+                    return 'Min 6 karakter';
                   }
                   return null;
                 },
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Identifier login otomatis memakai No HP. Jika kosong, pakai No Rumah.',
-                style: TextStyle(fontSize: 12, color: Colors.black54),
               ),
               const SizedBox(height: 24),
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
                       onPressed: _saveWarga,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      child: Text(
-                        _isEditing
-                            ? 'Update Warga & Akun'
-                            : 'Simpan Warga & Buat Akun',
-                        style: const TextStyle(fontSize: 18),
-                      ),
+                      child: Text(_isEditing ? 'Update' : 'Simpan'),
                     ),
             ],
           ),

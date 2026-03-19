@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../services/whatsapp_service.dart';
 import 'add_warga_page.dart';
 import 'detail_warga_page.dart';
 import '../../services/export_import_service.dart';
@@ -135,6 +136,11 @@ class _WargaPageState extends State<WargaPage> {
               icon: const Icon(Icons.file_copy),
               tooltip: "Export / Import",
               onPressed: () => _showExportImportMenu(context, _allWargaDocs),
+            ),
+            IconButton(
+              icon: const Icon(Icons.send),
+              tooltip: "Kirim Tagihan Bulan Ini",
+              onPressed: _kirimTagihanBulanIni,
             ),
             IconButton(
               icon: const Icon(Icons.add),
@@ -378,5 +384,88 @@ class _WargaPageState extends State<WargaPage> {
     }
 
     return total;
+  }
+
+  Future<void> _kirimTagihanBulanIni() async {
+    try {
+      final now = DateTime.now();
+
+      final bulan = BulanUtil.toStringMonth(now.month);
+      final tahun = now.year;
+
+      final iuranSnapshot = await FirebaseFirestore.instance
+          .collection("iuran")
+          .where("bulan", isEqualTo: bulan)
+          .where("tahun", isEqualTo: tahun)
+          .where("status", isEqualTo: "belum") // 🔥 hanya yang belum bayar
+          .get();
+
+      if (iuranSnapshot.docs.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Tidak ada tagihan yang perlu dikirim")),
+        );
+        return;
+      }
+
+      int success = 0;
+      int failed = 0;
+
+      for (final doc in iuranSnapshot.docs) {
+        try {
+          final data = doc.data();
+
+          final wargaDoc = await FirebaseFirestore.instance
+              .collection("warga")
+              .doc(data["wargaId"])
+              .get();
+
+          if (!wargaDoc.exists) continue;
+
+          final warga = wargaDoc.data()!;
+          final nama = warga["nama"] ?? '-';
+          final hp = warga["hp"] ?? '';
+
+          if (hp.toString().isEmpty) continue;
+
+          await WhatsappService.sendMessage(
+            phone: hp,
+            message:
+                '''
+Halo Bapak/Ibu $nama 👋
+
+Tagihan Iuran Anda saat ini:
+Bulan: $bulan $tahun
+Jumlah: Rp ${data["jumlah"]}
+
+Mohon segera melakukan pembayaran untuk kelancaran kegiatan perumahan kita bersama.
+Jika ada kendala anda bisa menghubungi kami di grup atau dm langsung.
+Terimakasih $nama
+''',
+          );
+
+          success++;
+
+          /// 🔥 optional delay biar gak dianggap spam
+          await Future.delayed(const Duration(milliseconds: 10000));
+        } catch (e) {
+          failed++;
+          debugPrint("Gagal kirim WA: $e");
+        }
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("WA terkirim: $success\nGagal: $failed"),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error kirim WA: $e")));
+    }
   }
 }

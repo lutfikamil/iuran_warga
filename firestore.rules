@@ -10,8 +10,16 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
+    function role() {
+      return isLoggedIn() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             userDoc().data.role != null
+        ? userDoc().data.role
+        : "guest";
+    }
+
     function getUserRole() {
-      return userDoc().data.role;
+      return role();
     }
 
     function isAdmin() {
@@ -19,23 +27,23 @@ service cloud.firestore {
     }
 
     function isKetua() {
-      return getUserRole() == 'ketua';
+      return getUserRole() == "ketua";
     }
 
     function isBendahara() {
-      return getUserRole() == 'bendahara';
+      return getUserRole() == "bendahara";
     }
 
     function isPetugas() {
-      return getUserRole() == 'petugas';
+      return getUserRole() == "petugas";
     }
 
     function isWarga() {
-      return getUserRole() == 'warga';
+      return getUserRole() == "warga";
     }
 
-    function isOwner(uid) {
-      return isLoggedIn() && request.auth.uid == uid;
+    function isOwner(id) {
+      return isLoggedIn() && request.auth.uid == id;
     }
 
     // ===== WARGA =====
@@ -53,7 +61,8 @@ service cloud.firestore {
     // ===== TRANSAKSI =====
     match /transaksi/{id} {
       allow read: if isLoggedIn();
-      allow create, update, delete: if getUserRole() in ['admin', 'sekertaris', 'bendahara'];
+      allow create, update, delete:
+        if getUserRole() in ['admin', 'sekertaris', 'bendahara'];
     }
 
     // ===== USERS =====
