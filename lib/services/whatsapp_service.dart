@@ -29,11 +29,11 @@ class WhatsappService {
     String p = phone.trim();
 
     if (p.startsWith('0')) {
-      p = '62${p.substring(1)}';
+      p = '+62${p.substring(1)}';
     }
 
-    if (!p.startsWith('62')) {
-      p = '62$p';
+    if (!p.startsWith('+62')) {
+      p = '+62$p';
     }
 
     return p;

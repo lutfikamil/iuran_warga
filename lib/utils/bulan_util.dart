@@ -168,10 +168,11 @@ class BulanUtil {
   }) {
     if (bulan == null || tahun == null) return false;
 
-    return isSebelumBulanBerjalan(
-      tahun: tahun,
-      bulan: toInt(bulan),
-      now: now,
-    );
+    final currentDate = now ?? DateTime.now();
+    final awalBulanBerjalan = DateTime(currentDate.year, currentDate.month);
+    final periodeIuran = DateTime(tahun, toInt(bulan));
+
+    // 🔥 logika baru: periode sama dengan bulan ini termasuk tunggakan
+    return !periodeIuran.isAfter(awalBulanBerjalan);
   }
 }
