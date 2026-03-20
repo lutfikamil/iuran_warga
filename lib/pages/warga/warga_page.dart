@@ -5,6 +5,7 @@ import '../../services/whatsapp_service.dart';
 import 'add_warga_page.dart';
 import 'detail_warga_page.dart';
 import '../../services/export_import_service.dart';
+import '../../services/auth_service.dart';
 import '../../services/session_service.dart';
 import '../../models/warga_model.dart';
 import 'generate_iuran_page.dart';
@@ -22,6 +23,7 @@ class _WargaPageState extends State<WargaPage> {
   final TextEditingController _searchController = TextEditingController();
   List<DocumentSnapshot> _allWargaDocs = [];
   bool _isWarga = false;
+  bool _isSendingTagihan = false;
 
   @override
   void initState() {
@@ -138,9 +140,15 @@ class _WargaPageState extends State<WargaPage> {
               onPressed: () => _showExportImportMenu(context, _allWargaDocs),
             ),
             IconButton(
-              icon: const Icon(Icons.send),
+              icon: _isSendingTagihan
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send),
               tooltip: "Kirim Tagihan Bulan Ini",
-              onPressed: _kirimTagihanBulanIni,
+              onPressed: _isSendingTagihan ? null : _kirimTagihanBulanIni,
             ),
             IconButton(
               icon: const Icon(Icons.add),
@@ -358,6 +366,116 @@ class _WargaPageState extends State<WargaPage> {
     return result;
   }
 
+  Future<bool> _verifikasiPasswordSebelumKirim() async {
+    final passwordController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isVerifying = false;
+
+    final isVerified = await showDialog<bool>(
+      context: context,
+      barrierDismissible: !isVerifying,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> verifyPassword() async {
+              if (!(formKey.currentState?.validate() ?? false)) return;
+
+              final identifier = SessionService.getIdentifier();
+              if (identifier == null || identifier.isEmpty) {
+                if (!mounted) return;
+                Navigator.of(dialogContext).pop(false);
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Sesi login tidak ditemukan. Silakan login ulang.'),
+                  ),
+                );
+                return;
+              }
+
+              setDialogState(() => isVerifying = true);
+
+              try {
+                await AuthService().loginFlexible(
+                  identifier,
+                  passwordController.text.trim(),
+                );
+
+                if (!dialogContext.mounted) return;
+                Navigator.of(dialogContext).pop(true);
+              } catch (_) {
+                if (!dialogContext.mounted) return;
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('Password verifikasi salah.')),
+                );
+              } finally {
+                if (dialogContext.mounted) {
+                  setDialogState(() => isVerifying = false);
+                }
+              }
+            }
+
+            return AlertDialog(
+              title: const Text('Verifikasi Password'),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Masukkan password akun Anda untuk mengirim tagihan WhatsApp.',
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: passwordController,
+                      obscureText: true,
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Password',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Password wajib diisi';
+                        }
+                        return null;
+                      },
+                      onFieldSubmitted: (_) {
+                        if (!isVerifying) {
+                          verifyPassword();
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isVerifying
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Batal'),
+                ),
+                FilledButton(
+                  onPressed: isVerifying ? null : verifyPassword,
+                  child: isVerifying
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Verifikasi'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    passwordController.dispose();
+    return isVerified ?? false;
+  }
+
   int hitungTunggakanWarga(
     List<QueryDocumentSnapshot> iuranDocs,
     String wargaId,
@@ -387,6 +505,15 @@ class _WargaPageState extends State<WargaPage> {
   }
 
   Future<void> _kirimTagihanBulanIni() async {
+    if (_isSendingTagihan) return;
+
+    final isVerified = await _verifikasiPasswordSebelumKirim();
+    if (!isVerified) return;
+
+    setState(() {
+      _isSendingTagihan = true;
+    });
+
     try {
       final now = DateTime.now();
 
@@ -466,6 +593,12 @@ Terimakasih $nama
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("Error kirim WA: $e")));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSendingTagihan = false;
+        });
+      }
     }
   }
 }
