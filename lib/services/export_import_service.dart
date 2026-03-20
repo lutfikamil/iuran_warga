@@ -78,8 +78,8 @@ class ExportImportService {
       // Header
       sheet.appendRow([
         TextCellValue('No'),
-        TextCellValue('Nama'),
         TextCellValue('Rumah'),
+        TextCellValue('Nama'),
         TextCellValue('HP'),
         TextCellValue('Status'),
         TextCellValue('Role'),
@@ -92,8 +92,8 @@ class ExportImportService {
 
         sheet.appendRow([
           TextCellValue((i + 1).toString()),
-          TextCellValue(data["nama"] ?? '-'),
           TextCellValue(data["rumah"] ?? '-'),
+          TextCellValue(data["nama"] ?? '-'),
           TextCellValue(data["hp"] ?? '-'),
           TextCellValue(data["status"] ?? '-'),
           TextCellValue(data["role"] ?? 'warga'),
@@ -176,8 +176,8 @@ class ExportImportService {
     final List<List<String>> tableData = [
       [
         'No',
-        'Nama',
         'Rumah',
+        'Nama',
         'HP',
         'Status',
         'Role',
@@ -187,8 +187,8 @@ class ExportImportService {
       final wargaData = wargaDocs[i].data() as Map<String, dynamic>;
       tableData.add([
         (i + 1).toString(),
-        wargaData["nama"] ?? '-',
         wargaData["rumah"] ?? '-',
+        wargaData["nama"] ?? '-',
         wargaData["hp"] ?? '-',
         wargaData["status"] ?? '-',
         wargaData["role"] ?? 'warga',

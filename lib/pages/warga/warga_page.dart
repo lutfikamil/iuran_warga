@@ -263,8 +263,8 @@ class _WargaPageState extends State<WargaPage> {
           border: TableBorder.all(color: Colors.grey.shade300),
           columnWidths: const {
             0: FixedColumnWidth(50),
-            1: FixedColumnWidth(150),
-            2: FixedColumnWidth(80),
+            1: FixedColumnWidth(70),
+            2: FixedColumnWidth(150),
             3: FixedColumnWidth(120),
             4: FixedColumnWidth(100),
             5: FixedColumnWidth(100),
@@ -291,8 +291,8 @@ class _WargaPageState extends State<WargaPage> {
               return _buildWargaTableRow(
                 [
                   Text("${index + 1}", textAlign: TextAlign.center),
-                  Text(warga.nama),
                   Text(warga.rumah, textAlign: TextAlign.center),
+                  Text(warga.nama),
                   Text(warga.hp),
                   Text(warga.status, textAlign: TextAlign.center),
                   Text(
@@ -327,8 +327,8 @@ class _WargaPageState extends State<WargaPage> {
     return _buildWargaTableRow(
       const [
         Text("No", textAlign: TextAlign.center),
-        Text("Nama", textAlign: TextAlign.center),
         Text("Rumah", textAlign: TextAlign.center),
+        Text("Nama", textAlign: TextAlign.center),
         Text("HP", textAlign: TextAlign.center),
         Text("Status", textAlign: TextAlign.center),
         Text("Tunggakan", textAlign: TextAlign.center),
@@ -386,7 +386,9 @@ class _WargaPageState extends State<WargaPage> {
                 Navigator.of(dialogContext).pop(false);
                 ScaffoldMessenger.of(this.context).showSnackBar(
                   const SnackBar(
-                    content: Text('Sesi login tidak ditemukan. Silakan login ulang.'),
+                    content: Text(
+                      'Sesi login tidak ditemukan. Silakan login ulang.',
+                    ),
                   ),
                 );
                 return;
