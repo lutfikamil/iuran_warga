@@ -11,6 +11,7 @@ import '../pages/pemasukan/pemasukan_page.dart';
 import '../pages/pemasukan/add_pemasukan_page.dart';
 import '../pages/settings/settings_page.dart';
 import '../pages/profile/profile_page.dart';
+import '../pages/sekertaris/sekertaris_data_page.dart';
 import '../services/auth_service.dart';
 
 final AuthService authService = AuthService();
@@ -28,6 +29,7 @@ class AppRoutes {
   static const laporanGlobal = "/laporan_global";
   static const settings = "/settings";
   static const profile = "/profile";
+  static const sekertarisData = "/sekertaris_data";
   static const unauthorized = "/unauthorized";
   static Widget _buildGuardedRoute({
     required Widget page,
@@ -122,6 +124,10 @@ class AppRoutes {
         UserRole.petugas,
         UserRole.warga,
       ],
+    ),
+    sekertarisData: (_) => _buildGuardedRoute(
+      page: const SekertarisDataPage(),
+      allowedRoles: [UserRole.admin, UserRole.ketua, UserRole.sekertaris],
     ),
     unauthorized: (_) => const UnauthorizedPage(), // Tambahkan rute ini juga
   };
