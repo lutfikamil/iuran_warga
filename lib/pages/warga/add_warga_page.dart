@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../../services/iuran_service.dart';
 import '../../services/log_service.dart';
 import '../../services/whatsapp_service.dart';
 import '../../services/users_service.dart';
@@ -35,6 +36,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
 
   bool _isLoading = false;
   bool _isEditing = false;
+  int _generatedIuranCount = 0;
 
   @override
   void initState() {
@@ -85,6 +87,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
+    _generatedIuranCount = 0;
 
     try {
       final nama = _namaController.text.trim();
@@ -156,6 +159,10 @@ class _AddWargaPageState extends State<AddWargaPage> {
           'createdAt': FieldValue.serverTimestamp(),
         });
 
+        final generatedCount = await IuranService()
+            .generateIuranMulaiBulanBerikutnyaUntukWargaBaru(wargaId: wargaId);
+        _generatedIuranCount = generatedCount;
+
         /// 🔥 buat user login (PUSAT LOGIKA)
         await upsertUserLogin(
           wargaId: wargaId,
@@ -170,7 +177,9 @@ class _AddWargaPageState extends State<AddWargaPage> {
         await LogService().logEvent(
           action: 'tambah_warga',
           target: 'warga',
-          detail: 'Tambah warga $nama',
+          detail:
+              'Tambah warga $nama'
+              '${generatedCount > 0 ? ' dan generate $generatedCount iuran susulan' : ''}',
         );
       }
 
@@ -211,7 +220,11 @@ Pengurus Perumahan Mulia Land Patria.
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              _isEditing ? 'Berhasil update warga' : 'Berhasil tambah warga',
+              _isEditing
+                  ? 'Berhasil update warga'
+                  : _generatedIuranCount > 0
+                  ? 'Berhasil tambah warga dan generate $_generatedIuranCount iuran susulan'
+                  : 'Berhasil tambah warga',
             ),
           ),
         );
