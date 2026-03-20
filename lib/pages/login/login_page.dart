@@ -73,6 +73,9 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  Image.asset('assets/images/logo_perumahan.png', height: 150),
+
+                  const SizedBox(height: 10),
                   const Text(
                     "Login Sistem Iuran\nMULIA LAND",
                     textAlign: TextAlign.center,

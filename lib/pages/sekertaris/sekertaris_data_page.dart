@@ -1,5 +1,12 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:excel/excel.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../services/log_service.dart';
 import '../../services/session_service.dart';
@@ -93,9 +100,12 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
                   }
 
                   await LogService().logEvent(
-                    action: isEditing ? 'update_data_sekertaris' : 'tambah_data_sekertaris',
+                    action: isEditing
+                        ? 'update_data_sekertaris'
+                        : 'tambah_data_sekertaris',
                     target: 'data_sekertaris',
-                    detail: '${isEditing ? 'Update' : 'Tambah'} data sekretaris rumah $rumah',
+                    detail:
+                        '${isEditing ? 'Update' : 'Tambah'} data sekretaris rumah $rumah',
                   );
 
                   if (!dialogContext.mounted) return;
@@ -110,7 +120,9 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
               }
 
               return AlertDialog(
-                title: Text(isEditing ? 'Edit Data Sekertaris' : 'Tambah Data Sekertaris'),
+                title: Text(
+                  isEditing ? 'Edit Data Sekertaris' : 'Tambah Data Sekertaris',
+                ),
                 content: SizedBox(
                   width: 700,
                   child: Form(
@@ -127,7 +139,8 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
                           _buildField(
                             label: 'Rumah',
                             controller: controllers['rumah']!,
-                            validator: (value) => value == null || value.trim().isEmpty
+                            validator: (value) =>
+                                value == null || value.trim().isEmpty
                                 ? 'Rumah wajib diisi'
                                 : null,
                           ),
@@ -175,7 +188,9 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
                 ),
                 actions: [
                   TextButton(
-                    onPressed: isSaving ? null : () => Navigator.of(dialogContext).pop(false),
+                    onPressed: isSaving
+                        ? null
+                        : () => Navigator.of(dialogContext).pop(false),
                     child: const Text('Batal'),
                   ),
                   FilledButton(
@@ -198,7 +213,11 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
       if ((result ?? false) && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isEditing ? 'Data sekretaris berhasil diperbarui.' : 'Data sekretaris berhasil ditambahkan.'),
+            content: Text(
+              isEditing
+                  ? 'Data sekretaris berhasil diperbarui.'
+                  : 'Data sekretaris berhasil ditambahkan.',
+            ),
           ),
         );
       }
@@ -256,18 +275,238 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
     );
   }
 
+  /// EXPORT EXCEL
+  Future<void> _exportExcel(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  ) async {
+    final excel = Excel.createExcel();
+    final sheet = excel['DataSekertaris'];
+
+    // header
+    sheet.appendRow(_headers.map((h) => TextCellValue(h)).toList());
+
+    // data
+    for (final doc in docs) {
+      final d = doc.data();
+      sheet.appendRow(
+        _headers.map((h) => TextCellValue(d[h]?.toString() ?? '')).toList(),
+      );
+    }
+
+    final bytes = excel.encode();
+    if (bytes == null) return;
+
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/data_sekertaris.xlsx');
+    await file.writeAsBytes(bytes);
+
+    await Share.shareXFiles([XFile(file.path)], text: 'Export Data Sekretaris');
+  }
+
+  /// IMPORT EXCEL
+  Future<void> _importExcel() async {
+    if (!_canEdit) return;
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['xlsx'],
+    );
+
+    if (result == null || result.files.single.bytes == null) return;
+
+    final bytes = result.files.single.bytes!;
+    final excel = Excel.decodeBytes(bytes);
+    final sheet = excel.tables[excel.tables.keys.first];
+
+    if (sheet == null || sheet.rows.isEmpty) return;
+
+    final headerRow = sheet.rows.first
+        .map((c) => c?.value?.toString().trim() ?? '')
+        .toList();
+    final colIndex = {
+      for (var i = 0; i < headerRow.length; i++) headerRow[i]: i,
+    };
+
+    if (!_headers.every((h) => colIndex.containsKey(h))) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Format Excel tidak cocok dengan header'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final batch = _firestore.batch();
+    for (var i = 1; i < sheet.rows.length; i++) {
+      final row = sheet.rows[i];
+      if (row.isEmpty) continue;
+
+      final data = <String, dynamic>{
+        for (final h in _headers) h: row[colIndex[h]!]?.value?.toString() ?? '',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      final docRef = _firestore.collection('data_sekertaris').doc();
+      batch.set(docRef, data);
+    }
+
+    await batch.commit();
+
+    await LogService().logEvent(
+      action: 'import_data_sekertaris',
+      target: 'data_sekertaris',
+      detail: 'Import ${sheet.rows.length - 1} baris dari Excel',
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Import Excel berhasil')));
+    }
+  }
+
+  /// EXPORT PDF
+  Future<void> _exportPdf(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  ) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4.landscape,
+        build: (context) => [
+          pw.Text(
+            'Data Sekretaris',
+            style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 10),
+          pw.TableHelper.fromTextArray(
+            headers: _headers,
+            data: docs.map((doc) {
+              final d = doc.data();
+              return _headers.map((h) => d[h]?.toString() ?? '').toList();
+            }).toList(),
+            border: pw.TableBorder.all(),
+            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            cellAlignment: pw.Alignment.centerLeft,
+          ),
+        ],
+      ),
+    );
+
+    final bytes = await pdf.save();
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/data_sekertaris.pdf');
+    await file.writeAsBytes(bytes);
+
+    await Share.shareXFiles([XFile(file.path)], text: 'Export Data Sekretaris');
+  }
+
+  /// IMPORT EXCEL
+  Future<void> importExcel() async {
+    if (!_canEdit) return;
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['xlsx'],
+    );
+
+    if (result == null || result.files.single.bytes == null) return;
+
+    final bytes = result.files.single.bytes!;
+    final excel = Excel.decodeBytes(bytes);
+    final sheet = excel.tables[excel.tables.keys.first];
+
+    if (sheet == null || sheet.rows.isEmpty) return;
+
+    final headerRow = sheet.rows.first
+        .map((c) => c?.value?.toString().trim())
+        .toList();
+    final colIndex = {
+      for (var i = 0; i < headerRow.length; i++) headerRow[i] ?? '': i,
+    };
+
+    // pastikan semua header ada
+    if (!_headers.every((h) => colIndex.containsKey(h))) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Format Excel tidak cocok dengan header'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final batch = _firestore.batch();
+    for (var i = 1; i < sheet.rows.length; i++) {
+      final row = sheet.rows[i];
+      if (row.isEmpty) continue;
+
+      final data = <String, dynamic>{
+        for (final h in _headers) h: row[colIndex[h]!]?.value?.toString() ?? '',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      final docRef = _firestore.collection('data_sekertaris').doc();
+      batch.set(docRef, data);
+    }
+
+    await batch.commit();
+
+    await LogService().logEvent(
+      action: 'import_data_sekertaris',
+      target: 'data_sekertaris',
+      detail: 'Import ${sheet.rows.length - 1} baris dari Excel',
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Import Excel berhasil')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Data Sekertaris'),
         actions: [
-          if (_canEdit)
+          if (_canEdit) ...[
+            IconButton(
+              tooltip: 'Import Excel',
+              onPressed: _importExcel,
+              icon: const Icon(Icons.upload_file),
+            ),
+            IconButton(
+              tooltip: 'Export Excel',
+              onPressed: () {
+                final docs = context
+                    .findAncestorStateOfType<_SekertarisDataPageState>()!
+                    ._filteredDocs;
+                _exportExcel(docs);
+              },
+              icon: const Icon(Icons.file_download),
+            ),
+            IconButton(
+              tooltip: 'Export PDF',
+              onPressed: () {
+                final docs = context
+                    .findAncestorStateOfType<_SekertarisDataPageState>()!
+                    ._filteredDocs;
+                _exportPdf(docs);
+              },
+              icon: const Icon(Icons.picture_as_pdf),
+            ),
             IconButton(
               tooltip: 'Tambah data',
               onPressed: () => _showEditDialog(),
               icon: const Icon(Icons.add),
             ),
+          ],
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(kToolbarHeight + 8),
@@ -329,6 +568,9 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
             );
           }).toList();
 
+          // simpan untuk export
+          _filteredDocs = docs;
+
           if (docs.isEmpty) {
             return Center(
               child: Text(
@@ -359,7 +601,7 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
                 },
                 children: [
                   _buildRow(
-                    color: Colors.blue.withOpacity(0.12),
+                    color: Colors.blue.withValues(alpha: 0.12),
                     textStyle: const TextStyle(fontWeight: FontWeight.bold),
                     children: const [
                       Text('No', textAlign: TextAlign.center),
@@ -380,10 +622,17 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
                     return _buildRow(
                       color: index.isEven ? Colors.grey.shade50 : Colors.white,
                       onTap: _canEdit
-                          ? () => _showEditDialog(docId: doc.id, initialData: data)
+                          ? () => _showEditDialog(
+                              docId: doc.id,
+                              initialData: data,
+                            )
                           : null,
                       children: [
-                        Text((data['no']?.toString().isNotEmpty ?? false) ? data['no'].toString() : '${index + 1}'),
+                        Text(
+                          (data['no']?.toString().isNotEmpty ?? false)
+                              ? data['no'].toString()
+                              : '${index + 1}',
+                        ),
                         Text(data['rumah']?.toString() ?? '-'),
                         Text(data['pemilik']?.toString() ?? '-'),
                         Text(data['noHpPemilik']?.toString() ?? '-'),
@@ -411,4 +660,7 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
           : null,
     );
   }
+
+  // helper untuk export
+  late List<QueryDocumentSnapshot<Map<String, dynamic>>> _filteredDocs;
 }

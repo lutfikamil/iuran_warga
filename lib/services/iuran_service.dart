@@ -51,7 +51,10 @@ class IuranService {
       throw Exception("Iuran $bulan $tahun sudah pernah dibuat");
     }
     final bulanIndex = BulanUtil.toInt(bulan);
-    final wargaSnapshot = await _firestore.collection("warga").get();
+    final wargaSnapshot = await _firestore
+        .collection("warga")
+        .where("iuranAktif", isEqualTo: true)
+        .get();
     final iuranAmount = await SettingsService().getIuranAmount();
     final jatuhTempo = DateTime(tahun, bulanIndex, 10);
     WriteBatch batch = _firestore.batch();
@@ -118,8 +121,8 @@ class IuranService {
     DateTime? tanggalDaftar,
   }) async {
     final now = tanggalDaftar ?? DateTime.now();
-    final dataWarga =
-        (await _firestore.collection('warga').doc(wargaId).get()).data();
+    final dataWarga = (await _firestore.collection('warga').doc(wargaId).get())
+        .data();
 
     if (dataWarga == null || !_isIuranEnabledForWarga(dataWarga)) {
       return 0;
@@ -319,7 +322,11 @@ Pengurus Perumahan Mulia Land Patria.
         .where("tahun", isEqualTo: tahun)
         .get();
 
-    final wargaSnapshot = await _firestore.collection("warga").get();
+    final wargaSnapshot = await _firestore
+        .collection("warga")
+        .where("hp", isGreaterThan: "")
+        .where("iuranAktif", isEqualTo: true)
+        .get();
 
     final Map<String, Map<String, dynamic>> wargaMap = {
       for (var w in wargaSnapshot.docs) w.id: w.data(),
@@ -363,7 +370,7 @@ Pengurus Perumahan Mulia Land Patria.
         sent++;
 
         /// delay biar aman dari limit WA API
-        await Future.delayed(const Duration(seconds: 2));
+        await Future.delayed(const Duration(seconds: 6));
       } catch (e) {
         _log("Gagal kirim ke $nama: $e");
       }
@@ -374,67 +381,67 @@ Pengurus Perumahan Mulia Land Patria.
     return sent;
   }
 
-  Future<void> kirimTagihanBulananOtomatis() async {
-    final now = DateTime.now();
-    final bulan = BulanUtil.toStringMonth(now.month);
-    final tahun = now.year;
-
-    /// 🔥 ambil hanya bulan ini + belum dikirim
-    final iuranSnapshot = await _firestore
-        .collection("iuran")
-        .where("bulan", isEqualTo: bulan)
-        .where("tahun", isEqualTo: tahun)
-        .where("notifTerkirim", isEqualTo: false)
-        .get();
-
-    final wargaSnapshot = await _firestore.collection("warga").get();
-
-    final Map<String, Map<String, dynamic>> wargaMap = {
-      for (var w in wargaSnapshot.docs) w.id: w.data(),
-    };
-
-    WriteBatch batch = _firestore.batch();
-    int sent = 0;
-
-    for (var doc in iuranSnapshot.docs) {
-      final data = doc.data();
-
-      /// skip kalau sudah lunas
-      if (data['status'] == 'lunas') continue;
-
-      final warga = wargaMap[data['wargaId']];
-      if (warga == null) continue;
-
-      final nama = warga['nama'] ?? '';
-      final hp = warga['hp'] ?? '';
-
-      if (hp.isEmpty) continue;
-
-      try {
-        await kirimTagihan(
-          nama: nama,
-          hp: hp,
-          bulan: bulan,
-          tahun: tahun,
-          jumlah: data['jumlah'],
-        );
-
-        /// 🔥 tandai sudah kirim
-        batch.update(doc.reference, {
-          "notifTerkirim": true,
-          "updatedAt": FieldValue.serverTimestamp(),
-        });
-
-        sent++;
-
-        await Future.delayed(const Duration(seconds: 2));
-      } catch (e) {
-        _log("Gagal kirim ke $nama: $e");
-      }
-    }
-
-    await batch.commit();
-
-    _log("Berhasil kirim $sent tagihan bulan $bulan");
-  }
+  //  Future<void> kirimTagihanBulananOtomatis() async {
+  //    final now = DateTime.now();
+  //    final bulan = BulanUtil.toStringMonth(now.month);
+  //    final tahun = now.year;
+  //
+  //    /// 🔥 ambil hanya bulan ini + belum dikirim
+  //    final iuranSnapshot = await _firestore
+  //        .collection("iuran")
+  //        .where("bulan", isEqualTo: bulan)
+  //        .where("tahun", isEqualTo: tahun)
+  //        .where("notifTerkirim", isEqualTo: false)
+  //        .get();
+  //
+  //    final wargaSnapshot = await _firestore.collection("warga").where("iuranAktif", isEqualTo: true).get();
+  //
+  //    final Map<String, Map<String, dynamic>> wargaMap = {
+  //      for (var w in wargaSnapshot.docs) w.id: w.data(),
+  //    };
+  //
+  //    WriteBatch batch = _firestore.batch();
+  //    int sent = 0;
+  //
+  //    for (var doc in iuranSnapshot.docs) {
+  //      final data = doc.data();
+  //
+  //      /// skip kalau sudah lunas
+  //      if (data['status'] == 'lunas') continue;
+  //
+  //      final warga = wargaMap[data['wargaId']];
+  //      if (warga == null) continue;
+  //
+  //      final nama = warga['nama'] ?? '';
+  //      final hp = warga['hp'] ?? '';
+  //
+  //      if (hp.isEmpty) continue;
+  //
+  //      try {
+  //        await kirimTagihan(
+  //          nama: nama,
+  //          hp: hp,
+  //          bulan: bulan,
+  //          tahun: tahun,
+  //          jumlah: data['jumlah'],
+  //        );
+  //
+  //        /// 🔥 tandai sudah kirim
+  //        batch.update(doc.reference, {
+  //          "notifTerkirim": true,
+  //          "updatedAt": FieldValue.serverTimestamp(),
+  //        });
+  //
+  //        sent++;
+  //
+  //        await Future.delayed(const Duration(seconds: 5));
+  //      } catch (e) {
+  //        _log("Gagal kirim ke $nama: $e");
+  //      }
+  //    }
+  //
+  //    await batch.commit();
+  //
+  //    _log("Berhasil kirim $sent tagihan bulan $bulan");
+  //  }
 }
