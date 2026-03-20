@@ -113,6 +113,85 @@ class IuranService {
     }
   }
 
+  Future<int> generateIuranMulaiBulanBerikutnyaUntukWargaBaru({
+    required String wargaId,
+    DateTime? tanggalDaftar,
+  }) async {
+    final now = tanggalDaftar ?? DateTime.now();
+    final dataWarga =
+        (await _firestore.collection('warga').doc(wargaId).get()).data();
+
+    if (dataWarga == null || !_isIuranEnabledForWarga(dataWarga)) {
+      return 0;
+    }
+
+    final targetDate = DateTime(now.year, now.month + 1);
+    final startMonth = targetDate.month;
+    final tahun = targetDate.year;
+    final iuranAmount = await SettingsService().getIuranAmount();
+    final existingIuranSnapshot = await _firestore
+        .collection('iuran')
+        .where('wargaId', isEqualTo: wargaId)
+        .where('tahun', isEqualTo: tahun)
+        .get();
+
+    final existingMonthsForWarga = <int>{
+      for (final doc in existingIuranSnapshot.docs)
+        BulanUtil.toInt((doc.data()['bulan'] ?? '').toString()),
+    };
+
+    final existingYearSnapshot = await _firestore
+        .collection('iuran')
+        .where('tahun', isEqualTo: tahun)
+        .get();
+
+    final availableMonths = <int>{
+      for (final doc in existingYearSnapshot.docs)
+        BulanUtil.toInt((doc.data()['bulan'] ?? '').toString()),
+    };
+
+    WriteBatch batch = _firestore.batch();
+    int counter = 0;
+    int createdCount = 0;
+
+    for (var month = startMonth; month <= 12; month++) {
+      if (!availableMonths.contains(month) ||
+          existingMonthsForWarga.contains(month)) {
+        continue;
+      }
+
+      final bulan = BulanUtil.toStringMonth(month);
+      final jatuhTempo = DateTime(tahun, month, 10);
+      final ref = _firestore.collection('iuran').doc();
+
+      batch.set(ref, {
+        'wargaId': wargaId,
+        'bulan': bulan,
+        'tahun': tahun,
+        'jumlah': iuranAmount,
+        'status': 'belum',
+        'notifTerkirim': false,
+        'jatuhTempo': Timestamp.fromDate(jatuhTempo),
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      counter++;
+      createdCount++;
+
+      if (counter % 400 == 0) {
+        await batch.commit();
+        batch = _firestore.batch();
+      }
+    }
+
+    if (counter > 0) {
+      await batch.commit();
+    }
+
+    return createdCount;
+  }
+
   Future<String> bayarIuranWarga({
     required String wargaId,
     required String bulan,
