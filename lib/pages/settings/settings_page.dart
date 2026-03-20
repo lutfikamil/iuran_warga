@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../services/settings_service.dart';
+
 import '../../services/log_service.dart';
+import '../../services/settings_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -13,6 +14,12 @@ class _SettingsPageState extends State<SettingsPage> {
   final SettingsService _settingsService = SettingsService();
 
   final TextEditingController _iuranController = TextEditingController();
+  final TextEditingController _whatsappServerController =
+      TextEditingController();
+  final TextEditingController _whatsappTokenController =
+      TextEditingController();
+  final TextEditingController _whatsappPhoneController =
+      TextEditingController();
 
   bool _loading = true;
   bool _saving = false;
@@ -25,8 +32,12 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> loadSettings() async {
     final amount = await _settingsService.getIuranAmount();
+    final whatsappSettings = await _settingsService.getWhatsappSettings();
 
     _iuranController.text = amount.toInt().toString();
+    _whatsappServerController.text = whatsappSettings.apiServer;
+    _whatsappTokenController.text = whatsappSettings.apiToken;
+    _whatsappPhoneController.text = whatsappSettings.senderPhone;
 
     setState(() {
       _loading = false;
@@ -35,11 +46,24 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> saveSettings() async {
     final value = double.tryParse(_iuranController.text);
+    final apiServer = _whatsappServerController.text.trim();
+    final apiToken = _whatsappTokenController.text.trim();
+    final senderPhone = _whatsappPhoneController.text.trim();
 
     if (value == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("Nominal tidak valid")));
+      ).showSnackBar(const SnackBar(content: Text('Nominal tidak valid')));
+      return;
+    }
+
+    final apiUri = Uri.tryParse(apiServer);
+
+    if (apiServer.isNotEmpty &&
+        (apiUri == null || !apiUri.hasScheme || !apiUri.hasAuthority)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Server API WhatsApp tidak valid')),
+      );
       return;
     }
 
@@ -48,10 +72,23 @@ class _SettingsPageState extends State<SettingsPage> {
     });
 
     await _settingsService.updateIuranAmount(value);
+    await _settingsService.updateWhatsappSettings(
+      WhatsappSettings(
+        apiServer: apiServer,
+        apiToken: apiToken,
+        senderPhone: senderPhone,
+      ),
+    );
+
     await LogService().logEvent(
       action: 'update_setting_iuran',
       target: 'settings/iuran',
       detail: 'Ubah nominal iuran menjadi Rp ${value.toStringAsFixed(0)}',
+    );
+    await LogService().logEvent(
+      action: 'update_setting_whatsapp',
+      target: 'settings/whatsapp',
+      detail: 'Perbarui konfigurasi WhatsApp gateway',
     );
 
     setState(() {
@@ -60,9 +97,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("Setting berhasil disimpan")));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Setting berhasil disimpan')),
+    );
   }
 
   Widget buildCard({required String title, required Widget child}) {
@@ -88,6 +125,9 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void dispose() {
     _iuranController.dispose();
+    _whatsappServerController.dispose();
+    _whatsappTokenController.dispose();
+    _whatsappPhoneController.dispose();
     super.dispose();
   }
 
@@ -98,27 +138,68 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Pengaturan")),
+      appBar: AppBar(title: const Text('Pengaturan')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            /// SETTING IURAN
             buildCard(
-              title: "Besaran Iuran Bulanan",
+              title: 'Besaran Iuran Bulanan',
               child: TextField(
                 controller: _iuranController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  labelText: "Nominal Iuran",
-                  prefixText: "Rp ",
+                  labelText: 'Nominal Iuran',
+                  prefixText: 'Rp ',
                   border: OutlineInputBorder(),
                 ),
               ),
             ),
-
+            const SizedBox(height: 20),
+            buildCard(
+              title: 'Konfigurasi WhatsApp Gateway',
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _whatsappServerController,
+                    keyboardType: TextInputType.url,
+                    decoration: const InputDecoration(
+                      labelText: 'Server API',
+                      hintText: 'https://api.fonnte.com/send',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _whatsappTokenController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Token API',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _whatsappPhoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'Nomor HP Device / Sender',
+                      hintText: '08xxxxxxxxxx',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Isi nomor device/sender jika gateway Anda membutuhkannya. Token tidak ditampilkan di log aktivitas.',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 30),
-
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -126,7 +207,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 onPressed: _saving ? null : saveSettings,
                 child: _saving
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text("Simpan Pengaturan"),
+                    : const Text('Simpan Pengaturan'),
               ),
             ),
           ],

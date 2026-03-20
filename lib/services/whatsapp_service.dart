@@ -1,19 +1,37 @@
 import 'package:http/http.dart' as http;
 
+import 'settings_service.dart';
+
 class WhatsappService {
-  static const String _token = 'Aw8teokbic7V8GT6WdTr';
+  static final SettingsService _settingsService = SettingsService();
 
   static Future<void> sendMessage({
     required String phone,
     required String message,
   }) async {
     try {
-      final url = Uri.parse('https://api.fonnte.com/send');
+      final settings = await _settingsService.getWhatsappSettings();
+
+      if (settings.apiServer.isEmpty || settings.apiToken.isEmpty) {
+        throw Exception(
+          'Konfigurasi WhatsApp belum lengkap. Isi server API dan token di halaman Pengaturan.',
+        );
+      }
+
+      final url = Uri.parse(settings.apiServer);
+      final body = <String, String>{
+        'target': _formatPhone(phone),
+        'message': message,
+      };
+
+      if (settings.senderPhone.isNotEmpty) {
+        body['phone'] = _formatPhone(settings.senderPhone);
+      }
 
       final response = await http.post(
         url,
-        headers: {'Authorization': _token},
-        body: {'target': _formatPhone(phone), 'message': message},
+        headers: {'Authorization': settings.apiToken},
+        body: body,
       );
 
       if (response.statusCode != 200) {
@@ -24,7 +42,6 @@ class WhatsappService {
     }
   }
 
-  /// 🔥 FORMAT NOMOR (WAJIB)
   static String _formatPhone(String phone) {
     String p = phone.trim();
 
