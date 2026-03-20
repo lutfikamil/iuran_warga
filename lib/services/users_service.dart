@@ -1,6 +1,19 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../services/auth_service.dart';
+
+String generateRandomPassword({int length = 10}) {
+  const chars =
+      'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  final random = Random.secure();
+
+  return List.generate(
+    length,
+    (_) => chars[random.nextInt(chars.length)],
+  ).join();
+}
 
 Future<void> upsertUserLogin({
   required String wargaId,

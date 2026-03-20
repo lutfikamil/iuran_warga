@@ -98,10 +98,10 @@ class _AddWargaPageState extends State<AddWargaPage> {
       final identifier = _resolveIdentifier();
       final email = "$identifier@mulialand.com";
 
-      /// 🔥 pakai password default jika kosong
-      final password = _passwordController.text.trim().isEmpty
-          ? '123456'
-          : _passwordController.text.trim();
+      final inputPassword = _passwordController.text.trim();
+      final password = inputPassword.isNotEmpty
+          ? inputPassword
+          : (_isEditing ? null : generateRandomPassword());
 
       final isRumahKosong = (_selectedStatus ?? '').toLowerCase() == 'kosong';
 
@@ -177,7 +177,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
       /// =========================================
       /// 🔥 AUTO KIRIM WHATSAPP
       /// =========================================
-      if (hp.isNotEmpty) {
+      if (hp.isNotEmpty && password != null) {
         final message =
             '''
 Halo Bapak/Ibu $nama
@@ -347,13 +347,13 @@ Pengurus Perumahan Mulia Land Patria.
                 decoration: InputDecoration(
                   labelText: _isEditing
                       ? 'Password baru (opsional)'
-                      : 'Password',
+                      : 'Password (opsional)',
+                  hintText: _isEditing
+                      ? 'Kosongkan jika tidak ingin mengubah password'
+                      : 'Kosongkan untuk password random otomatis',
                   border: const OutlineInputBorder(),
                 ),
                 validator: (v) {
-                  if (!_isEditing && (v == null || v.isEmpty)) {
-                    return 'Password wajib';
-                  }
                   if (v != null && v.isNotEmpty && v.length < 6) {
                     return 'Min 6 karakter';
                   }
