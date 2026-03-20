@@ -7,47 +7,65 @@ import '../../widgets/dashboard/dashboard_stat.dart';
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
+  bool get _showSekertarisMenu {
+    final role = (SessionService.getRole() ?? '').toLowerCase();
+    return role == 'admin' || role == 'ketua' || role == 'sekertaris';
+  }
+
   /// =========================
   /// MENU LIST
   /// =========================
-  List<Map<String, dynamic>> get menus => [
-    {"title": "Profile", "icon": Icons.person, "route": AppRoutes.profile},
-    {
-      "title": "Data Warga",
-      "icon": Icons.people,
-      "route": AppRoutes.warga,
-      "color": Colors.blue,
-    },
-    {
-      "title": "Pemasukan Iuran",
-      "icon": Icons.payments,
-      "route": AppRoutes.pembayaran,
-      "color": Colors.green,
-    },
-    {
-      "title": "Pemasukan Umum",
-      "icon": Icons.trending_down,
-      "route": AppRoutes.pemasukan,
-      "color": Colors.green,
-    },
-    {
-      "title": "Pengeluaran",
-      "icon": Icons.trending_up,
-      "route": AppRoutes.pengeluaran,
-      "color": Colors.red,
-    },
-    {"title": "Laporan", "icon": Icons.bar_chart, "route": AppRoutes.laporan},
-    {
-      "title": "Laporan Global",
-      "icon": Icons.book,
-      "route": AppRoutes.laporanGlobal,
-    },
-    {
-      "title": "Pengaturan",
-      "icon": Icons.settings,
-      "route": AppRoutes.settings,
-    },
-  ];
+  List<Map<String, dynamic>> get menus {
+    final items = [
+      {"title": "Profile", "icon": Icons.person, "route": AppRoutes.profile},
+      {
+        "title": "Data Warga",
+        "icon": Icons.people,
+        "route": AppRoutes.warga,
+        "color": Colors.blue,
+      },
+      {
+        "title": "Pemasukan Iuran",
+        "icon": Icons.payments,
+        "route": AppRoutes.pembayaran,
+        "color": Colors.green,
+      },
+      {
+        "title": "Pemasukan Umum",
+        "icon": Icons.trending_down,
+        "route": AppRoutes.pemasukan,
+        "color": Colors.green,
+      },
+      {
+        "title": "Pengeluaran",
+        "icon": Icons.trending_up,
+        "route": AppRoutes.pengeluaran,
+        "color": Colors.red,
+      },
+      {"title": "Laporan", "icon": Icons.bar_chart, "route": AppRoutes.laporan},
+      {
+        "title": "Laporan Global",
+        "icon": Icons.book,
+        "route": AppRoutes.laporanGlobal,
+      },
+      {
+        "title": "Pengaturan",
+        "icon": Icons.settings,
+        "route": AppRoutes.settings,
+      },
+    ];
+
+    if (_showSekertarisMenu) {
+      items.insert(2, {
+        "title": "Data Sekertaris",
+        "icon": Icons.assignment,
+        "route": AppRoutes.sekertarisData,
+        "color": Colors.teal,
+      });
+    }
+
+    return items;
+  }
 
   /// =========================
   /// MENU CARD
