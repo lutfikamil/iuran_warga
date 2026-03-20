@@ -30,7 +30,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        implementation(platform("com.google.firebase:firebase-bom:34.10.0"))
+        
     }
 
     buildTypes {
@@ -41,7 +41,10 @@ android {
         }
     }
 }
-
+dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:34.10.0"))
+    implementation("com.google.firebase:firebase-crashlytics-ktx")
+}
 flutter {
     source = "../.."
 }
