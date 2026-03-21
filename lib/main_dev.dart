@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'routes/app_routes.dart';
+import 'services/auth_service.dart';
 import 'services/firestore_offline_service.dart';
 import 'services/session_service.dart';
 import 'firebase_options_dev.dart';
@@ -19,6 +20,7 @@ void main() async {
   await initializeDateFormatting('id_ID', null);
 
   await SessionService.init();
+  AuthService().restoreRoleFromSession(SessionService.getRole());
 
   runApp(const MyAppDev());
 }
