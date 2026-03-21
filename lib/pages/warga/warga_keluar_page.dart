@@ -37,7 +37,7 @@ class WargaKeluarPage extends StatelessWidget {
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: docs.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final data = docs[index].data();
               return Card(
@@ -50,7 +50,9 @@ class WargaKeluarPage extends StatelessWidget {
                       Text('Rumah terakhir: ${data['rumahTerakhir'] ?? '-'}'),
                       Text('Status keluar: ${data['statusKeluar'] ?? '-'}'),
                       Text('HP: ${data['hp'] ?? '-'}'),
-                      Text('Diarsipkan: ${_formatTimestamp(data['archivedAt'])}'),
+                      Text(
+                        'Diarsipkan: ${_formatTimestamp(data['archivedAt'])}',
+                      ),
                     ],
                   ),
                 ),

@@ -1,111 +1,131 @@
 import 'package:flutter/material.dart';
 import '../../routes/app_routes.dart';
 import '../../services/session_service.dart';
-import '../../services/dashboard_service.dart';
-import '../../widgets/dashboard/dashboard_stat.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
   String get _role => (SessionService.getRole() ?? '').toLowerCase();
 
-  bool get _showSekertarisMenu {
-    return _role == 'admin' || _role == 'ketua' || _role == 'sekertaris';
-  }
+  bool get _showSekertarisMenu =>
+      _role == 'admin' || _role == 'ketua' || _role == 'sekertaris';
 
-  bool get _showMusolahMenu {
-    return _role == 'admin' || _role == 'ketua' || _role == 'bendahara' || _role == 'pengurus_musolah';
-  }
+  bool get _showMusolahMenu =>
+      _role == 'admin' ||
+      _role == 'ketua' ||
+      _role == 'bendahara' ||
+      _role == 'pengurus_musolah';
 
   /// =========================
   /// MENU LIST
   /// =========================
   List<Map<String, dynamic>> get menus {
     final items = [
-      {"title": "Profile", "icon": Icons.person, "route": AppRoutes.profile},
-      {
-        "title": "Data Warga",
-        "icon": Icons.people,
-        "route": AppRoutes.warga,
-        "color": Colors.blue,
-      },
-      {
-        "title": "Pemasukan Iuran",
-        "icon": Icons.payments,
-        "route": AppRoutes.pembayaran,
-        "color": Colors.green,
-      },
-      {
-        "title": "Pemasukan Umum",
-        "icon": Icons.trending_down,
-        "route": AppRoutes.pemasukan,
-        "color": Colors.green,
-      },
-      {
-        "title": "Pengeluaran",
-        "icon": Icons.trending_up,
-        "route": AppRoutes.pengeluaran,
-        "color": Colors.red,
-      },
-      {"title": "Laporan", "icon": Icons.bar_chart, "route": AppRoutes.laporan},
-      {
-        "title": "Laporan Global",
-        "icon": Icons.book,
-        "route": AppRoutes.laporanGlobal,
-      },
-      {
-        "title": "Pengaturan",
-        "icon": Icons.settings,
-        "route": AppRoutes.settings,
-      },
+      _menu("Profile", Icons.person, AppRoutes.profile),
+      _menu("Data Warga", Icons.people, AppRoutes.warga, Colors.blue),
+      _menu(
+        "Pemasukan Iuran",
+        Icons.payments,
+        AppRoutes.pembayaran,
+        Colors.green,
+      ),
+      _menu(
+        "Pemasukan Umum",
+        Icons.trending_down,
+        AppRoutes.pemasukan,
+        Colors.green,
+      ),
+      _menu(
+        "Pengeluaran",
+        Icons.trending_up,
+        AppRoutes.pengeluaran,
+        Colors.red,
+      ),
+      _menu("Laporan", Icons.bar_chart, AppRoutes.laporan),
+      _menu("Laporan Global", Icons.book, AppRoutes.laporanGlobal),
+      _menu("Pengaturan", Icons.settings, AppRoutes.settings),
     ];
 
     if (_showSekertarisMenu) {
-      items.insert(2, {
-        "title": "Data Sekertaris",
-        "icon": Icons.assignment,
-        "route": AppRoutes.sekertarisData,
-        "color": Colors.teal,
-      });
+      items.insert(
+        2,
+        _menu(
+          "Data Sekertaris",
+          Icons.assignment,
+          AppRoutes.sekertarisData,
+          Colors.teal,
+        ),
+      );
     }
 
     if (_showMusolahMenu) {
-      items.add({
-        "title": "Keuangan Musolah",
-        "icon": Icons.mosque,
-        "route": AppRoutes.keuanganMusolah,
-        "color": Colors.deepPurple,
-      });
+      items.add(
+        _menu(
+          "Keuangan Musolah",
+          Icons.mosque,
+          AppRoutes.keuanganMusolah,
+          Colors.deepPurple,
+        ),
+      );
     }
 
     return items;
   }
 
+  Map<String, dynamic> _menu(
+    String title,
+    IconData icon,
+    String route, [
+    Color? color,
+  ]) {
+    return {
+      "title": title,
+      "icon": icon,
+      "route": route,
+      "color": color ?? Colors.orange,
+    };
+  }
+
   /// =========================
   /// MENU CARD
   /// =========================
-  Widget menuCard(BuildContext context, Map<String, dynamic> menu) {
-    final color = menu["color"] ?? Colors.orange;
+  Widget _menuCard(BuildContext context, Map<String, dynamic> menu) {
+    final color = menu["color"] as Color;
+
     return InkWell(
+      borderRadius: BorderRadius.circular(16),
       onTap: () => Navigator.pushNamed(context, menu["route"]),
-      child: Card(
-        elevation: 5,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 6,
+              color: Colors.black.withValues(alpha: 0.05),
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
         child: SizedBox(
-          width: 140,
-          height: 95,
+          height: 100,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(menu["icon"], size: 32, color: color),
+                child: Icon(menu["icon"], size: 28, color: color),
               ),
               const SizedBox(height: 10),
-              Text(menu["title"]),
+              Text(
+                menu["title"],
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 13),
+              ),
             ],
           ),
         ),
@@ -118,9 +138,7 @@ class DashboardPage extends StatelessWidget {
   /// =========================
   Future<void> logout(BuildContext context) async {
     await SessionService.logout();
-
     if (!context.mounted) return;
-
     Navigator.pushReplacementNamed(context, AppRoutes.login);
   }
 
@@ -129,7 +147,14 @@ class DashboardPage extends StatelessWidget {
   /// =========================
   @override
   Widget build(BuildContext context) {
-    final dashboardService = DashboardService();
+    final width = MediaQuery.of(context).size.width;
+
+    int crossAxisCount = 2;
+    if (width > 900) {
+      crossAxisCount = 4;
+    } else if (width > 600) {
+      crossAxisCount = 3;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -141,146 +166,20 @@ class DashboardPage extends StatelessWidget {
           ),
         ],
       ),
-      body: FutureBuilder(
-        future: Future.wait([
-          dashboardService.totalWargaAktif(),
-          dashboardService.totalSaldoKasFormatted(),
-          dashboardService.jumlahWargaMenunggak(),
-          dashboardService.totalNominalTunggakanFormatted(),
-          dashboardService.getStatistikKetaatan(),
-        ]),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Data dashboard gagal dimuat.',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text('${snapshot.error}', textAlign: TextAlign.center),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          final totalWarga = snapshot.data?[0] ?? 0;
-          final totalKas = (snapshot.data?[1] as String?) ?? 'Rp 0';
-
-          final belumBayar = snapshot.data?[2] ?? 0;
-          final tunggakan = (snapshot.data?[3] as String?) ?? 'Rp 0';
-          final data = snapshot.data;
-
-          final ketaatanData = (data != null && data.length > 4)
-              ? data[4] as Map<String, dynamic>
-              : {};
-
-          final persenKetaatan = (ketaatanData["persen"] ?? 0).toDouble();
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Ketaatan Warga: ${persenKetaatan.toStringAsFixed(1)}%",
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    int crossAxisCount = 2;
-
-                    if (constraints.maxWidth > 900) {
-                      crossAxisCount = 4; // desktop
-                    } else if (constraints.maxWidth > 600) {
-                      crossAxisCount = 3; // tablet
-                    }
-
-                    double itemWidth =
-                        (constraints.maxWidth - (18 * (crossAxisCount - 1))) /
-                        crossAxisCount;
-
-                    return Wrap(
-                      spacing: 18,
-                      runSpacing: 18,
-                      children: [
-                        SizedBox(
-                          width: itemWidth,
-                          child: DashboardStat(
-                            title: "Total Warga",
-                            value: totalWarga.toString(),
-                            icon: Icons.people,
-                          ),
-                        ),
-                        SizedBox(
-                          width: itemWidth,
-                          child: DashboardStat(
-                            title: "Total Kas",
-                            value: totalKas,
-                            icon: Icons.account_balance_wallet,
-                          ),
-                        ),
-                        SizedBox(
-                          width: itemWidth,
-                          child: DashboardStat(
-                            title: "Belum Bayar",
-                            value: belumBayar.toString(),
-                            icon: Icons.warning,
-                          ),
-                        ),
-                        SizedBox(
-                          width: itemWidth,
-                          child: DashboardStat(
-                            title: "Total Tunggakan",
-                            value: tunggakan,
-                            icon: Icons.money_off,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 30),
-
-                const Text(
-                  "Menu",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-
-                const SizedBox(height: 10),
-
-                Wrap(
-                  spacing: 18,
-                  runSpacing: 18,
-                  children: menus
-                      .map((menu) => menuCard(context, menu))
-                      .toList(),
-                ),
-              ],
-            ),
-          );
-        },
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: GridView.builder(
+          itemCount: menus.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 25,
+            mainAxisSpacing: 25,
+            childAspectRatio: 1.2,
+          ),
+          itemBuilder: (context, index) {
+            return _menuCard(context, menus[index]);
+          },
+        ),
       ),
     );
   }
