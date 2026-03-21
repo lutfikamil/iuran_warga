@@ -325,8 +325,8 @@ class ExportImportService {
           if (_isRowEmpty(row)) continue;
 
           try {
-            final nama = _safeString(row, 1);
-            final rumahRaw = _safeString(row, 2);
+            final rumahRaw = _safeString(row, 1);
+            final nama = _safeString(row, 2);
             final hp = _safeString(row, 3);
             final status = _safeString(row, 4);
             final role = _safeString(row, 5).toLowerCase();
@@ -349,8 +349,8 @@ class ExportImportService {
             final nomor = rumahData['nomor'];
 
             final wargaData = {
-              'nama': nama,
               'rumah': rumah,
+              'nama': nama,
               'blok': blok,
               'nomor': nomor,
               'hp': hp,
