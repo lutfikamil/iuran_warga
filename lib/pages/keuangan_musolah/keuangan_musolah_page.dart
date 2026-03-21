@@ -18,10 +18,7 @@ class KeuanganMusolahPage extends StatefulWidget {
 }
 
 class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
-  final ScrollController _horizontalScrollController = ScrollController();
-  final ScrollController _verticalScrollController = ScrollController();
-  final TextEditingController _searchController = TextEditingController();
-
+  static const String _collectionName = 'keuangan_musolah';
   static const EdgeInsets tableCellPadding = EdgeInsets.all(8);
   static const double _colWidthNo = 48;
   static const double _colWidthTanggal = 110;
@@ -30,6 +27,11 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
   static const double _colWidthSaldo = 130;
   static const double _colWidthPetugas = 150;
   static const double _colWidthKeterangan = 260;
+
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ScrollController _horizontalScrollController = ScrollController();
+  final ScrollController _verticalScrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
 
   String _searchQuery = '';
   bool _isExporting = false;
@@ -56,26 +58,24 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
     return DateFormat('dd MMM yyyy', 'id_ID').format(tanggal);
   }
 
+  CollectionReference<Map<String, dynamic>> get _collection {
+    return _firestore.collection(_collectionName);
+  }
+
   List<Map<String, dynamic>> _withRunningBalance(
-    List<QueryDocumentSnapshot> docs,
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
   ) {
     double saldo = 0;
-    return docs
-        .where((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          return (data['kategoriKas'] ?? '').toString().toLowerCase() ==
-              'musolah';
-        })
-        .map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          final jenis = (data['jenis'] ?? 'masuk').toString();
-          final jumlah = (data['jumlah'] as num?)?.toDouble() ?? 0;
+    return docs.map((doc) {
+      final data = doc.data();
+      final jenis = (data['jenis'] ?? 'masuk').toString();
+      final jumlah = (data['jumlah'] as num?)?.toDouble() ?? 0;
 
-          if (jenis == 'masuk') {
-            saldo += jumlah;
-          } else {
-            saldo -= jumlah;
-          }
+      if (jenis == 'masuk') {
+        saldo += jumlah;
+      } else {
+        saldo -= jumlah;
+      }
 
           return {
             'id': doc.id,
@@ -135,14 +135,12 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
 
               setDialogState(() => isSaving = true);
               try {
-                await FirebaseFirestore.instance.collection('transaksi').add({
+                await _collection.add({
                   'tanggal': Timestamp.fromDate(selectedTanggal),
                   'jenis': jenis,
                   'jumlah': double.parse(jumlahController.text.trim()),
                   'petugas': SessionService.getNama(),
                   'keterangan': keteranganController.text.trim(),
-                  'kategoriKas': 'musolah',
-                  'statusBendahara': 'diterima',
                   'createdAt': FieldValue.serverTimestamp(),
                   'updatedAt': FieldValue.serverTimestamp(),
                 });
@@ -152,7 +150,9 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      'Transaksi ${jenis == 'masuk' ? 'pemasukan' : 'pengeluaran'} musolah berhasil disimpan.',
+                      'Transaksi '
+                      '${jenis == 'masuk' ? 'pemasukan' : 'pengeluaran'} '
+                      'musolah berhasil disimpan.',
                     ),
                   ),
                 );
@@ -466,11 +466,8 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
             ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('transaksi')
-            .orderBy('tanggal')
-            .snapshots(),
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: _collection.orderBy('tanggal').snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
