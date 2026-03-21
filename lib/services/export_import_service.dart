@@ -14,9 +14,26 @@ import 'package:intl/intl.dart';
 import 'users_service.dart';
 import 'whatsapp_service.dart';
 import 'warga_lifecycle_service.dart';
+import 'sekertaris_sync_service.dart';
 
 class ExportImportService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static const List<String> wargaImportHeaders = [
+    'No',
+    'Rumah',
+    'Nama',
+    'HP',
+    'Status',
+    'Role',
+    'Pemilik',
+    'NoHpPemilik',
+    'DihuniOleh',
+    'NoHpPenghuni',
+    'NoKtp',
+    'NoKk',
+    'Keterangan',
+    'Tanggal Bergabung',
+  ];
 
   static pw.Font? _notoSans;
   static Future<pw.Font> _loadNotoSans() async {
@@ -77,15 +94,9 @@ class ExportImportService {
       final sheet = excel['Data Warga'];
 
       // Header
-      sheet.appendRow([
-        TextCellValue('No'),
-        TextCellValue('Rumah'),
-        TextCellValue('Nama'),
-        TextCellValue('HP'),
-        TextCellValue('Status'),
-        TextCellValue('Role'),
-        TextCellValue('Tanggal Bergabung'),
-      ]);
+      sheet.appendRow(
+        wargaImportHeaders.map((header) => TextCellValue(header)).toList(),
+      );
 
       // Data
       for (int i = 0; i < wargaDocs.length; i++) {
@@ -98,6 +109,13 @@ class ExportImportService {
           TextCellValue(data["noHpPenghuni"] ?? '-'),
           TextCellValue(data["status"] ?? '-'),
           TextCellValue(data["role"] ?? 'warga'),
+          TextCellValue(data["nama"] ?? '-'),
+          TextCellValue(data["noHpPenghuni"] ?? '-'),
+          TextCellValue(data["nama"] ?? '-'),
+          TextCellValue(data["noHpPenghuni"] ?? '-'),
+          const TextCellValue(''),
+          const TextCellValue(''),
+          const TextCellValue(''),
           TextCellValue(data["tanggalBergabung"] ?? '-'),
         ]);
       }
@@ -318,7 +336,16 @@ class ExportImportService {
 
       for (var table in excel.tables.keys) {
         final sheet = excel.tables[table];
-        if (sheet == null) continue;
+        if (sheet == null || sheet.maxRows == 0) continue;
+
+        final headerRow = sheet.row(0);
+        final columnIndex = _buildImportColumnIndex(headerRow);
+
+        if (!_requiredImportHeaders.every(columnIndex.containsKey)) {
+          throw Exception(
+            'Header import wajib: ${wargaImportHeaders.join(', ')}',
+          );
+        }
 
         for (int i = 1; i < sheet.maxRows; i++) {
           final row = sheet.row(i);
@@ -326,12 +353,40 @@ class ExportImportService {
           if (_isRowEmpty(row)) continue;
 
           try {
-            final rumahRaw = _safeString(row, 1);
-            final nama = _safeString(row, 2);
-            final hp = _safeString(row, 3);
-            final status = _safeString(row, 4);
-            final role = _safeString(row, 5).toLowerCase();
-            final tanggal = _safeString(row, 6);
+            final rumahRaw = _getImportValue(row, columnIndex, 'rumah');
+            final no = _getImportValue(row, columnIndex, 'no');
+            final nama = _getImportValue(row, columnIndex, 'nama');
+            final hp = _getImportValue(row, columnIndex, 'hp');
+            final status = _getImportValue(row, columnIndex, 'status');
+            final role = _getImportValue(row, columnIndex, 'role').toLowerCase();
+            final pemilik = _getImportValue(row, columnIndex, 'pemilik');
+            final noHpPemilik = _getImportValue(
+              row,
+              columnIndex,
+              'nohppemilik',
+            );
+            final dihuniOleh = _getImportValue(
+              row,
+              columnIndex,
+              'dihunioleh',
+            );
+            final noHpSekertaris = _getImportValue(
+              row,
+              columnIndex,
+              'nohppenghuni',
+            );
+            final noKtp = _getImportValue(row, columnIndex, 'noktp');
+            final noKk = _getImportValue(row, columnIndex, 'nokk');
+            final keterangan = _getImportValue(
+              row,
+              columnIndex,
+              'keterangan',
+            );
+            final tanggal = _getImportValue(
+              row,
+              columnIndex,
+              'tanggal bergabung',
+            );
 
             if (nama.isEmpty || rumahRaw.isEmpty) {
               failedRows.add('Baris ${i + 1}: Nama/Rumah kosong');
@@ -383,10 +438,19 @@ class ExportImportService {
             /// 🔥 simpan untuk create login
             usersToCreate.add({
               'wargaId': ref.id,
+              'no': no,
               'nama': nama,
               'rumah': rumah,
               'noHpPenghuni': hp,
+              'status': status,
               'role': wargaData['role'],
+              'pemilik': pemilik,
+              'noHpPemilik': noHpPemilik,
+              'dihuniOleh': dihuniOleh,
+              'noHpPenghuniSekertaris': noHpSekertaris,
+              'noKtp': noKtp,
+              'noKk': noKk,
+              'keterangan': keterangan,
             });
 
             successCount++;
@@ -427,6 +491,8 @@ class ExportImportService {
             newRawPassword: defaultPassword,
           );
 
+          userSuccess++;
+
           /// 🔥 AUTO KIRIM WA
           if (hp != null && hp.toString().isNotEmpty) {
             await WhatsappService.sendMessage(
@@ -456,6 +522,28 @@ Pengurus Perumahan Mulia Land Patria.
           }
         } catch (e) {
           debugPrint('Error: $e');
+        }
+      }
+
+      for (final user in usersToCreate) {
+        try {
+          await SekertarisSyncService().syncWarga(
+            rumah: (user['rumah'] ?? '').toString(),
+            nama: (user['nama'] ?? '').toString(),
+            noHpPenghuni:
+                (user['noHpPenghuniSekertaris'] ?? user['noHpPenghuni'] ?? '')
+                    .toString(),
+            status: (user['status'] ?? 'Dihuni').toString(),
+            no: (user['no'] ?? '').toString(),
+            pemilik: (user['pemilik'] ?? '').toString(),
+            noHpPemilik: (user['noHpPemilik'] ?? '').toString(),
+            dihuniOleh: (user['dihuniOleh'] ?? '').toString(),
+            noKtp: (user['noKtp'] ?? '').toString(),
+            noKk: (user['noKk'] ?? '').toString(),
+            keterangan: (user['keterangan'] ?? '').toString(),
+          );
+        } catch (e) {
+          debugPrint('Error sinkron data sekretaris: $e');
         }
       }
 
@@ -503,5 +591,81 @@ Pengurus Perumahan Mulia Land Patria.
 
   static String _resolveIdentifier(String hp, String rumah) {
     return hp.isNotEmpty ? hp : rumah;
+  }
+
+  static const List<String> _requiredImportHeaders = [
+    'no',
+    'rumah',
+    'nama',
+    'hp',
+    'status',
+    'role',
+    'pemilik',
+    'nohppemilik',
+    'dihunioleh',
+    'nohppenghuni',
+    'noktp',
+    'nokk',
+    'keterangan',
+    'tanggal bergabung',
+  ];
+
+  static Map<String, int> _buildImportColumnIndex(List<Data?> row) {
+    final result = <String, int>{};
+
+    for (int i = 0; i < row.length; i++) {
+      final normalized = _normalizeImportHeader(
+        row[i]?.value?.toString() ?? '',
+      );
+
+      if (normalized.isNotEmpty) {
+        result[normalized] = i;
+      }
+    }
+
+    return result;
+  }
+
+  static String _getImportValue(
+    List<Data?> row,
+    Map<String, int> columnIndex,
+    String header,
+  ) {
+    final index = columnIndex[header];
+    if (index == null) return '';
+    return _safeString(row, index);
+  }
+
+  static String _normalizeImportHeader(String value) {
+    final normalized = value.trim().toLowerCase().replaceAll(' ', '');
+    switch (normalized) {
+      case 'statussekertaris':
+      case 'statussekretaris':
+        return 'status';
+      case 'phone':
+      case 'nohp':
+      case 'nomorhp':
+        return 'hp';
+      case 'nohppemilik':
+      case 'nomorhppemilik':
+        return 'nohppemilik';
+      case 'nohppenghuni':
+      case 'nomorhppenghuni':
+        return 'nohppenghuni';
+      case 'dihunioleh':
+      case 'penghuni':
+        return 'dihunioleh';
+      case 'noktps':
+      case 'noktp':
+        return 'noktp';
+      case 'nokk':
+      case 'nokartukeluarga':
+        return 'nokk';
+      case 'tanggal_bergabung':
+      case 'tanggalbergabung':
+        return 'tanggal bergabung';
+      default:
+        return normalized;
+    }
   }
 }
