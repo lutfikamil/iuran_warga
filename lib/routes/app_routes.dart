@@ -15,6 +15,7 @@ import '../pages/profile/profile_page.dart';
 import '../pages/sekertaris/sekertaris_data_page.dart';
 import '../pages/keuangan_musolah/keuangan_musolah_page.dart';
 import '../services/auth_service.dart';
+import '../services/session_service.dart';
 
 final AuthService authService = AuthService();
 
@@ -41,11 +42,21 @@ class AppRoutes {
   }) {
     return Builder(
       builder: (context) {
+        final isLoggedIn = SessionService.isLogin();
+        final savedRole = SessionService.getRole();
+
+        if (!isLoggedIn || savedRole == null || savedRole.trim().isEmpty) {
+          authService.setCurrentUserRole(UserRole.unauthenticated);
+          return const LoginPage();
+        }
+
+        authService.restoreRoleFromSession(savedRole);
+
         if (authService.hasAnyRole(allowedRoles)) {
           return page;
-        } else {
-          return const UnauthorizedPage();
         }
+
+        return const UnauthorizedPage();
       },
     );
   }

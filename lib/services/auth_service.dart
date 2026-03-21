@@ -4,6 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'users_service.dart';
+import 'whatsapp_service.dart';
+
 enum UserRole {
   admin,
   ketua,
@@ -29,6 +32,18 @@ class LoginResult {
   });
 }
 
+class PasswordResetResult {
+  final bool sentToWhatsapp;
+  final String maskedPhone;
+  final String temporaryPassword;
+
+  const PasswordResetResult({
+    required this.sentToWhatsapp,
+    required this.maskedPhone,
+    required this.temporaryPassword,
+  });
+}
+
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -45,6 +60,22 @@ class AuthService {
 
   void setCurrentUserRole(UserRole role) {
     _currentUserRole = role;
+  }
+
+  UserRole roleFromString(String? role) {
+    final normalizedRole = (role ?? '').trim().toLowerCase();
+    if (normalizedRole.isEmpty) {
+      return UserRole.unauthenticated;
+    }
+
+    return UserRole.values.firstWhere(
+      (value) => value.name.toLowerCase() == normalizedRole.replaceAll('_', ''),
+      orElse: () => UserRole.unauthenticated,
+    );
+  }
+
+  void restoreRoleFromSession(String? role) {
+    setCurrentUserRole(roleFromString(role));
   }
 
   String hashPassword(String password) {
@@ -75,13 +106,11 @@ class AuthService {
 
     final userDoc = await _findUserByIdentifier(normalizedIdentifier);
 
-    // Pastikan userDoc dan datanya tidak null sebelum diakses
     if (userDoc == null || userDoc.data() == null) {
       throw Exception('User tidak ditemukan');
     }
 
-    final data = userDoc
-        .data()!; // Gunakan ! karena sudah dipastikan tidak null
+    final data = userDoc.data()!;
 
     if (data['password'] != hashPassword(password)) {
       throw Exception('Password salah');
@@ -92,10 +121,7 @@ class AuthService {
     }
 
     final roleString = (data['role'] ?? 'warga').toString().toLowerCase();
-    final role = UserRole.values.firstWhere(
-      (e) => e.name.toLowerCase() == roleString.replaceAll('_', ''),
-      orElse: () => UserRole.unauthenticated,
-    );
+    final role = roleFromString(roleString);
 
     setCurrentUserRole(role);
     return LoginResult(
@@ -126,6 +152,77 @@ class AuthService {
     return null;
   }
 
+  String maskPhoneNumber(String phone) {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length <= 4) return phone;
+
+    final visibleEnd = digits.substring(digits.length - 4);
+    return '••••$visibleEnd';
+  }
+
+  Future<PasswordResetResult> resetPasswordForResident(String identifier) async {
+    final normalizedIdentifier = identifier.trim();
+    if (normalizedIdentifier.isEmpty) {
+      throw Exception('Identifier wajib diisi.');
+    }
+
+    final userDoc = await _findUserByIdentifier(normalizedIdentifier);
+    if (userDoc == null || userDoc.data() == null) {
+      throw Exception('Akun tidak ditemukan.');
+    }
+
+    final userData = userDoc.data()!;
+    if (userData['isActive'] == false) {
+      throw Exception('Akun sudah tidak aktif.');
+    }
+
+    final phone = (userData['noHpPenghuni'] ?? '').toString().trim();
+    if (phone.isEmpty) {
+      throw Exception(
+        'Nomor WhatsApp belum terdaftar. Silakan hubungi pengurus untuk reset manual.',
+      );
+    }
+
+    final temporaryPassword = generateRandomPassword(length: 10);
+    await _db.collection('users').doc(userDoc.id).update({
+      'password': hashPassword(temporaryPassword),
+      'forceChangePassword': true,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    final nama = (userData['nama'] ?? 'Warga').toString();
+    final rumah = (userData['rumah'] ?? '-').toString();
+
+    try {
+      await WhatsappService.sendMessage(
+        phone: phone,
+        message: '''Halo Bapak/Ibu $nama
+
+Kami menerima permintaan reset password untuk akun rumah $rumah.
+
+Password sementara Anda:
+$temporaryPassword
+
+Silakan login menggunakan password sementara ini lalu segera ganti password di menu profil.
+Jika Anda tidak merasa meminta reset password, segera hubungi pengurus.
+
+Terima kasih.
+Pengurus Perumahan Mulia Land Patria.''',
+      );
+      return PasswordResetResult(
+        sentToWhatsapp: true,
+        maskedPhone: maskPhoneNumber(phone),
+        temporaryPassword: temporaryPassword,
+      );
+    } catch (_) {
+      return PasswordResetResult(
+        sentToWhatsapp: false,
+        maskedPhone: maskPhoneNumber(phone),
+        temporaryPassword: temporaryPassword,
+      );
+    }
+  }
+
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
@@ -150,19 +247,18 @@ class AuthService {
 
     final userDoc = await _findUserByIdentifier(identifier);
 
-    // Pastikan userDoc dan datanya tidak null sebelum diakses
     if (userDoc == null || userDoc.data() == null) {
       throw Exception('Akun user tidak ditemukan');
     }
 
-    final userData = userDoc
-        .data()!; // Gunakan ! karena sudah dipastikan tidak null
+    final userData = userDoc.data()!;
     if (userData['password'] != hashPassword(currentPassword)) {
       throw Exception('Password saat ini salah');
     }
 
     await _db.collection('users').doc(userDoc.id).update({
       'password': hashPassword(newPassword),
+      'forceChangePassword': false,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }

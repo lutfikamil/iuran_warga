@@ -51,9 +51,13 @@ Future<void> upsertUserLogin({
     }
   }
 
-  final passwordHash = (newRawPassword != null && newRawPassword.isNotEmpty)
-      ? AuthService().hashPassword(newRawPassword)
-      : (currentData['password'] ?? AuthService().hashPassword('123456'));
+  final effectivePassword = (newRawPassword != null && newRawPassword.isNotEmpty)
+      ? newRawPassword
+      : (currentData['password'] == null ? generateRandomPassword() : null);
+
+  final passwordHash = effectivePassword != null
+      ? AuthService().hashPassword(effectivePassword)
+      : currentData['password'];
 
   batch.set(userDocRef, {
     'wargaId': wargaId,
@@ -64,6 +68,7 @@ Future<void> upsertUserLogin({
     'role': role,
     'password': passwordHash,
     'isActive': true,
+    'forceChangePassword': currentData['forceChangePassword'] ?? false,
     'updatedAt': FieldValue.serverTimestamp(),
     'createdAt': currentData['createdAt'] ?? FieldValue.serverTimestamp(),
   }, SetOptions(merge: true));

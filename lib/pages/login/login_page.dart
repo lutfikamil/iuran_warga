@@ -11,17 +11,116 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController identifierController = TextEditingController(
-    text: 'admin@perum.com',
-  );
-  final TextEditingController passwordController = TextEditingController(
-    text: '123456',
-  );
+  final TextEditingController identifierController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
 
   bool loading = false;
 
   // ✅ TAMBAHAN
   bool _obscurePassword = true;
+
+  Future<void> _showForgotPasswordDialog() async {
+    final resetIdentifierController = TextEditingController(
+      text: identifierController.text.trim(),
+    );
+    final formKey = GlobalKey<FormState>();
+    bool isSubmitting = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> submitReset() async {
+              if (!(formKey.currentState?.validate() ?? false)) return;
+
+              setDialogState(() => isSubmitting = true);
+              try {
+                final result = await AuthService().resetPasswordForResident(
+                  resetIdentifierController.text.trim(),
+                );
+
+                if (!dialogContext.mounted) return;
+                Navigator.of(dialogContext).pop();
+
+                final message = result.sentToWhatsapp
+                    ? 'Password sementara sudah dikirim ke WhatsApp ${result.maskedPhone}. Silakan login lalu segera ganti password.'
+                    : 'Password sementara berhasil dibuat, tetapi pengiriman WhatsApp gagal. Password sementara Anda: ${result.temporaryPassword}';
+
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  SnackBar(content: Text(message)),
+                );
+              } catch (e) {
+                if (!dialogContext.mounted) return;
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  SnackBar(content: Text(e.toString())),
+                );
+              } finally {
+                if (dialogContext.mounted) {
+                  setDialogState(() => isSubmitting = false);
+                }
+              }
+            }
+
+            return AlertDialog(
+              title: const Text('Lupa Password'),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Masukkan email, nomor HP, atau nomor rumah yang terdaftar. Password sementara akan dikirim ke WhatsApp yang tersimpan pada akun.',
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: resetIdentifierController,
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Email / No HP / No Rumah',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Identifier wajib diisi';
+                        }
+                        return null;
+                      },
+                      onFieldSubmitted: (_) {
+                        if (!isSubmitting) {
+                          submitReset();
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Batal'),
+                ),
+                ElevatedButton(
+                  onPressed: isSubmitting ? null : submitReset,
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Reset Password'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    resetIdentifierController.dispose();
+  }
 
   Future<void> login() async {
     setState(() {
@@ -58,6 +157,13 @@ class _LoginPageState extends State<LoginPage> {
     setState(() {
       loading = false;
     });
+  }
+
+  @override
+  void dispose() {
+    identifierController.dispose();
+    passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -117,7 +223,17 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
+
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: loading ? null : _showForgotPasswordDialog,
+                      child: const Text('Lupa password?'),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
 
                   SizedBox(
                     width: double.infinity,

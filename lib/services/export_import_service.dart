@@ -466,8 +466,6 @@ class ExportImportService {
       /// =========================================
       int userSuccess = 0;
 
-      const defaultPassword = '123456';
-
       for (final user in usersToCreate) {
         try {
           final nama = user['nama'];
@@ -477,6 +475,8 @@ class ExportImportService {
           final identifier = _resolveIdentifier(hp, rumah);
           final email = '$identifier@mulialand.com';
 
+          final generatedPassword = generateRandomPassword();
+
           await upsertUserLogin(
             wargaId: user['wargaId'],
             nama: nama,
@@ -484,7 +484,7 @@ class ExportImportService {
             noHpPenghuni: hp,
             role: user['role'],
             identifier: identifier,
-            newRawPassword: defaultPassword,
+            newRawPassword: generatedPassword,
           );
 
           userSuccess++;
@@ -503,7 +503,7 @@ Keadaan keuangan di Perumahan kita tercinta ini.
 
   Login:
 Email: $email
-Password: $defaultPassword
+Password: $generatedPassword
 
 Silakan login dan segera ganti password.
 Jika ada pertanyaan jangan sungkan untuk menghubungi kami baik di Group atau DM langsung.
