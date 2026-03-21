@@ -133,7 +133,7 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Daftar Pengeluaran"),
+        title: const Text("Daftar Pengeluaran Warga"),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -200,6 +200,11 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
           List<DocumentSnapshot>
           filteredPengeluaranDocs = allPengeluaranDocs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
+            final kategoriKas =
+                (data['kategoriKas'] ?? 'warga').toString().toLowerCase();
+            if (kategoriKas == 'musolah') {
+              return false;
+            }
             final String jumlah = (data['jumlah'] as num?)?.toString() ?? '';
             final String dari = data['dari']?.toLowerCase() ?? '';
             final String penerima = data['penerima']?.toLowerCase() ?? '';
@@ -215,8 +220,8 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
             return Center(
               child: Text(
                 _searchQuery.isEmpty
-                    ? 'Tidak ada data pengeluaran saat ini.'
-                    : 'Tidak ada pengeluaran yang cocok dengan "$_searchQuery".',
+                    ? 'Tidak ada data pengeluaran warga saat ini.'
+                    : 'Tidak ada pengeluaran warga yang cocok dengan "$_searchQuery".',
               ),
             );
           }

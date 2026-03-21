@@ -40,9 +40,9 @@ class _PemasukanPageState extends State<PemasukanPage> {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus Pemasukan Umum'),
+        title: const Text('Hapus Pemasukan Warga'),
         content: const Text(
-          'Apakah Anda yakin ingin menghapus pemasukan umum ini?',
+          'Apakah Anda yakin ingin menghapus pemasukan warga ini?',
         ),
         actions: [
           TextButton(
@@ -68,7 +68,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
       }
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pemasukan umum berhasil dihapus!')),
+        const SnackBar(content: Text('Pemasukan warga berhasil dihapus!')),
       );
     } catch (e) {
       if (!mounted) {
@@ -76,7 +76,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
       }
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal menghapus pemasukan umum: $e')),
+        SnackBar(content: Text('Gagal menghapus pemasukan warga: $e')),
       );
     }
   }
@@ -196,7 +196,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pemasukan Umum'),
+        title: const Text('Pemasukan Warga'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -259,6 +259,11 @@ class _PemasukanPageState extends State<PemasukanPage> {
                 final allDocs = snapshot.data!.docs;
                 final filteredDocs = allDocs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
+                  final kategoriKas =
+                      (data['kategoriKas'] ?? 'warga').toString().toLowerCase();
+                  if (kategoriKas == 'musolah') {
+                    return false;
+                  }
                   final dari = (data['dari'] ?? '').toString().toLowerCase();
                   final penerima = (data['penerima'] ?? '')
                       .toString()
@@ -277,8 +282,8 @@ class _PemasukanPageState extends State<PemasukanPage> {
                   return Center(
                     child: Text(
                       _searchQuery.isEmpty
-                          ? 'Tidak ada data pemasukan umum saat ini.'
-                          : 'Tidak ada pemasukan yang cocok dengan "$_searchQuery".',
+                          ? 'Tidak ada data pemasukan warga saat ini.'
+                          : 'Tidak ada pemasukan warga yang cocok dengan "$_searchQuery".',
                     ),
                   );
                 }

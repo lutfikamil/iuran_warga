@@ -48,6 +48,7 @@ class PengeluaranService {
         "dari": dari,
         "penerima": penerima,
         "keterangan": keterangan ?? '',
+        "kategoriKas": "warga",
         "statusBendahara": "menunggu", // Status awal
         "createdAt": FieldValue.serverTimestamp(),
         "updatedAt": FieldValue.serverTimestamp(),
@@ -81,6 +82,7 @@ class PengeluaranService {
         "dari": dari,
         "penerima": penerima,
         "keterangan": keterangan ?? '',
+        "kategoriKas": "warga",
         "updatedAt": FieldValue.serverTimestamp(),
         // jenis dan statusBendahara tidak diubah di sini
       });

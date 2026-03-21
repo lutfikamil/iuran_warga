@@ -18,6 +18,7 @@ class PembayaranService {
       ...data,
       'jenis': data['jenis'] ?? 'masuk',
       'sumberPemasukan': data['sumberPemasukan'] ?? 'iuran',
+      'kategoriKas': data['kategoriKas'] ?? 'warga',
       'bulanIuran': data['bulanIuran'],
       'tahunIuran': data['tahunIuran'],
       'tanggal': data['tanggal'] ?? Timestamp.fromDate(now),

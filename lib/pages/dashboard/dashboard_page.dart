@@ -36,20 +36,20 @@ class DashboardPage extends StatelessWidget {
         "color": Colors.green,
       },
       {
-        "title": "Pemasukan Umum",
+        "title": "Pemasukan Warga",
         "icon": Icons.trending_down,
         "route": AppRoutes.pemasukan,
         "color": Colors.green,
       },
       {
-        "title": "Pengeluaran",
+        "title": "Pengeluaran Warga",
         "icon": Icons.trending_up,
         "route": AppRoutes.pengeluaran,
         "color": Colors.red,
       },
-      {"title": "Laporan", "icon": Icons.bar_chart, "route": AppRoutes.laporan},
+      {"title": "Laporan Warga", "icon": Icons.bar_chart, "route": AppRoutes.laporan},
       {
-        "title": "Laporan Global",
+        "title": "Laporan Global Warga",
         "icon": Icons.book,
         "route": AppRoutes.laporanGlobal,
       },
@@ -235,7 +235,7 @@ class DashboardPage extends StatelessWidget {
                         SizedBox(
                           width: itemWidth,
                           child: DashboardStat(
-                            title: "Total Kas",
+                            title: "Total Kas Warga",
                             value: totalKas,
                             icon: Icons.account_balance_wallet,
                           ),

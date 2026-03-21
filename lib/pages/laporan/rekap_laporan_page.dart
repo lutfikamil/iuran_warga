@@ -5,10 +5,15 @@ import '../../widgets/app_card.dart';
 class RekapLaporanPage extends StatelessWidget {
   const RekapLaporanPage({super.key});
 
+  bool _isKasWarga(Map<String, dynamic> data) {
+    final kategoriKas = (data['kategoriKas'] ?? 'warga').toString().toLowerCase();
+    return kategoriKas.isEmpty || kategoriKas == 'warga';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Laporan Global")),
+      appBar: AppBar(title: const Text("Laporan Global Warga")),
 
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection("transaksi").snapshots(),
@@ -18,7 +23,10 @@ class RekapLaporanPage extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          var docs = snapshot.data!.docs;
+          final docs = snapshot.data!.docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return _isKasWarga(data);
+          }).toList();
 
           num total = 0;
 
@@ -47,7 +55,7 @@ class RekapLaporanPage extends StatelessWidget {
                 ),
 
                 AppCard(
-                  title: "Total Kas",
+                  title: "Total Kas Warga",
                   value: "Rp ${total.toInt()}",
                   icon: Icons.account_balance_wallet,
                 ),

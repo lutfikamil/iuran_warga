@@ -12,6 +12,11 @@ class LaporanPage extends StatefulWidget {
 }
 
 class _LaporanPageState extends State<LaporanPage> {
+  bool _isKasWarga(Map<String, dynamic> data) {
+    final kategoriKas = (data['kategoriKas'] ?? 'warga').toString().toLowerCase();
+    return kategoriKas.isEmpty || kategoriKas == 'warga';
+  }
+
   final ScrollController _horizontalScrollController = ScrollController();
   final ScrollController _verticalScrollController = ScrollController();
 
@@ -151,6 +156,7 @@ class _LaporanPageState extends State<LaporanPage> {
     List<Map<String, dynamic>> allTransactions = [];
     for (var doc in snapshot.docs) {
       final data = doc.data() as Map<String, dynamic>;
+      if (!_isKasWarga(data)) continue;
       allTransactions.add({
         'id': doc.id,
         'tanggal': data['tanggal'],
@@ -350,7 +356,7 @@ class _LaporanPageState extends State<LaporanPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Laporan Keuangan"),
+        title: const Text("Laporan Keuangan Warga"),
         actions: [
           IconButton(
             icon: const Icon(Icons.file_download),
@@ -431,6 +437,7 @@ class _LaporanPageState extends State<LaporanPage> {
           List<Map<String, dynamic>> allTransactions = [];
           for (var doc in snapshot.data!.docs) {
             final data = doc.data() as Map<String, dynamic>;
+            if (!_isKasWarga(data)) continue;
             allTransactions.add({
               'id': doc.id,
               'tanggal': data['tanggal'],

@@ -43,6 +43,7 @@ class PemasukanService {
         'penerima': penerima,
         'keterangan': keterangan ?? '',
         'sumberPemasukan': 'umum',
+        'kategoriKas': 'warga',
         'statusBendahara': 'menunggu',
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -76,6 +77,7 @@ class PemasukanService {
         'dari': dari,
         'penerima': penerima,
         'keterangan': keterangan ?? '',
+        'kategoriKas': 'warga',
         'updatedAt': FieldValue.serverTimestamp(),
       });
       _log('Pemasukan umum ID: $id berhasil diperbarui.');

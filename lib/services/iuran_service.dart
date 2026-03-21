@@ -260,6 +260,7 @@ class IuranService {
           "dari": dariKeterangan,
           "penerima": role, // Ambil dari session user yang login
           "keterangan": "Iuran bulan ${data["bulan"]} ID Iuran: $iuranId",
+          "kategoriKas": "warga",
           "statusBendahara": "menunggu", // Status awal saat dimasukkan
           "referensiId": iuranId,
           "createdAt": FieldValue.serverTimestamp(),

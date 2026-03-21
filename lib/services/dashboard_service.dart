@@ -34,6 +34,11 @@ class DashboardService {
     );
   }
 
+  static bool _isKasWarga(Map<String, dynamic> data) {
+    final kategoriKas = _normalizeText(data['kategoriKas']);
+    return kategoriKas.isEmpty || kategoriKas == 'warga';
+  }
+
   // Formatter Rupiah ribuan dengan titik
   static String _formatRupiah(int amount) {
     final formatter = NumberFormat.decimalPattern('id_ID');
@@ -101,6 +106,8 @@ class DashboardService {
 
     for (final doc in transaksiSnap.docs) {
       final data = doc.data();
+      if (!_isKasWarga(data)) continue;
+
       final jumlah = _toInt(data['jumlah']);
       final jenis = _normalizeText(data['jenis']);
 
