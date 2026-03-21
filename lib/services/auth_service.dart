@@ -10,6 +10,7 @@ enum UserRole {
   bendahara,
   sekertaris,
   petugas,
+  pengurusMusolah,
   warga,
   unauthenticated,
 }
@@ -85,9 +86,13 @@ class AuthService {
       throw Exception('Password salah');
     }
 
+    if (data['isActive'] == false) {
+      throw Exception('Akun sudah tidak aktif');
+    }
+
     final roleString = (data['role'] ?? 'warga').toString().toLowerCase();
     final role = UserRole.values.firstWhere(
-      (e) => e.toString() == 'UserRole.$roleString',
+      (e) => e.name.toLowerCase() == roleString.replaceAll('_', ''),
       orElse: () => UserRole.unauthenticated,
     );
 

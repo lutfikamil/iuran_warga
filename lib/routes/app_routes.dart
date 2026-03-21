@@ -3,6 +3,7 @@ import '../pages/laporan/laporan_page.dart';
 import '../pages/login/login_page.dart';
 import '../pages/dashboard/dashboard_page.dart';
 import '../pages/warga/warga_page.dart';
+import '../pages/warga/warga_keluar_page.dart';
 import '../pages/pembayaran/pembayaran_page.dart';
 import '../pages/laporan/rekap_laporan_page.dart';
 import '../pages/pengeluaran/pengeluaran_page.dart';
@@ -12,6 +13,7 @@ import '../pages/pemasukan/add_pemasukan_page.dart';
 import '../pages/settings/settings_page.dart';
 import '../pages/profile/profile_page.dart';
 import '../pages/sekertaris/sekertaris_data_page.dart';
+import '../pages/keuangan_musolah/keuangan_musolah_page.dart';
 import '../services/auth_service.dart';
 
 final AuthService authService = AuthService();
@@ -21,6 +23,7 @@ class AppRoutes {
   static const dashboard = "/dashboard";
   static const warga = "/warga";
   static const pembayaran = "/pembayaran";
+  static const wargaKeluar = "/warga_keluar";
   static const pengeluaran = "/pengeluaran";
   static const addPengeluaran = "/add_pengeluaran";
   static const pemasukan = "/pemasukan";
@@ -30,6 +33,7 @@ class AppRoutes {
   static const settings = "/settings";
   static const profile = "/profile";
   static const sekertarisData = "/sekertaris_data";
+  static const keuanganMusolah = "/keuangan_musolah";
   static const unauthorized = "/unauthorized";
   static Widget _buildGuardedRoute({
     required Widget page,
@@ -56,6 +60,7 @@ class AppRoutes {
         UserRole.bendahara,
         UserRole.sekertaris,
         UserRole.petugas,
+        UserRole.pengurusMusolah,
         UserRole.warga,
       ],
     ),
@@ -71,6 +76,16 @@ class AppRoutes {
     pembayaran: (_) => _buildGuardedRoute(
       page: const PembayaranPage(),
       allowedRoles: [UserRole.admin, UserRole.bendahara, UserRole.petugas],
+    ),
+    wargaKeluar: (_) => _buildGuardedRoute(
+      page: const WargaKeluarPage(),
+      allowedRoles: [
+        UserRole.admin,
+        UserRole.ketua,
+        UserRole.bendahara,
+        UserRole.sekertaris,
+        UserRole.petugas,
+      ],
     ),
     pengeluaran: (_) => _buildGuardedRoute(
       page: const PengeluaranPage(),
@@ -122,12 +137,22 @@ class AppRoutes {
         UserRole.bendahara,
         UserRole.sekertaris,
         UserRole.petugas,
+        UserRole.pengurusMusolah,
         UserRole.warga,
       ],
     ),
     sekertarisData: (_) => _buildGuardedRoute(
       page: const SekertarisDataPage(),
       allowedRoles: [UserRole.admin, UserRole.ketua, UserRole.sekertaris],
+    ),
+    keuanganMusolah: (_) => _buildGuardedRoute(
+      page: const KeuanganMusolahPage(),
+      allowedRoles: [
+        UserRole.admin,
+        UserRole.ketua,
+        UserRole.bendahara,
+        UserRole.pengurusMusolah,
+      ],
     ),
     unauthorized: (_) => const UnauthorizedPage(), // Tambahkan rute ini juga
   };
