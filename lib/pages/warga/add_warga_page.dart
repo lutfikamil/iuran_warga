@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../services/iuran_service.dart';
 import '../../services/log_service.dart';
+import '../../services/sekertaris_sync_service.dart';
 import '../../services/whatsapp_service.dart';
 import '../../services/users_service.dart';
 import '../../services/warga_lifecycle_service.dart';
@@ -145,6 +146,13 @@ class _AddWargaPageState extends State<AddWargaPage> {
           newRawPassword: password,
         );
 
+        await SekertarisSyncService().syncWarga(
+          rumah: rumah,
+          nama: nama,
+          noHpPenghuni: hp,
+          status: (_selectedStatus ?? 'Dihuni'),
+        );
+
         await LogService().logEvent(
           action: 'update_warga',
           target: 'warga',
@@ -176,6 +184,13 @@ class _AddWargaPageState extends State<AddWargaPage> {
           role: _selectedRole,
           identifier: identifier,
           newRawPassword: password,
+        );
+
+        await SekertarisSyncService().syncWarga(
+          rumah: rumah,
+          nama: nama,
+          noHpPenghuni: hp,
+          status: (_selectedStatus ?? 'Dihuni'),
         );
 
         await LogService().logEvent(
