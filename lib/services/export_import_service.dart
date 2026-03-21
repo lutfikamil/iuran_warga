@@ -113,9 +113,9 @@ class ExportImportService {
           TextCellValue(data["noHpPenghuni"] ?? '-'),
           TextCellValue(data["nama"] ?? '-'),
           TextCellValue(data["noHpPenghuni"] ?? '-'),
-          const TextCellValue(''),
-          const TextCellValue(''),
-          const TextCellValue(''),
+          TextCellValue(''),
+          TextCellValue(''),
+          TextCellValue(''),
           TextCellValue(data["tanggalBergabung"] ?? '-'),
         ]);
       }
@@ -358,18 +358,18 @@ class ExportImportService {
             final nama = _getImportValue(row, columnIndex, 'nama');
             final hp = _getImportValue(row, columnIndex, 'hp');
             final status = _getImportValue(row, columnIndex, 'status');
-            final role = _getImportValue(row, columnIndex, 'role').toLowerCase();
+            final role = _getImportValue(
+              row,
+              columnIndex,
+              'role',
+            ).toLowerCase();
             final pemilik = _getImportValue(row, columnIndex, 'pemilik');
             final noHpPemilik = _getImportValue(
               row,
               columnIndex,
               'nohppemilik',
             );
-            final dihuniOleh = _getImportValue(
-              row,
-              columnIndex,
-              'dihunioleh',
-            );
+            final dihuniOleh = _getImportValue(row, columnIndex, 'dihunioleh');
             final noHpSekertaris = _getImportValue(
               row,
               columnIndex,
@@ -377,11 +377,7 @@ class ExportImportService {
             );
             final noKtp = _getImportValue(row, columnIndex, 'noktp');
             final noKk = _getImportValue(row, columnIndex, 'nokk');
-            final keterangan = _getImportValue(
-              row,
-              columnIndex,
-              'keterangan',
-            );
+            final keterangan = _getImportValue(row, columnIndex, 'keterangan');
             final tanggal = _getImportValue(
               row,
               columnIndex,
