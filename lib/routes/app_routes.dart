@@ -12,6 +12,7 @@ import '../pages/pemasukan/add_pemasukan_page.dart';
 import '../pages/settings/settings_page.dart';
 import '../pages/profile/profile_page.dart';
 import '../pages/sekertaris/sekertaris_data_page.dart';
+import '../pages/keuangan_musolah/keuangan_musolah_page.dart';
 import '../services/auth_service.dart';
 
 final AuthService authService = AuthService();
@@ -30,6 +31,7 @@ class AppRoutes {
   static const settings = "/settings";
   static const profile = "/profile";
   static const sekertarisData = "/sekertaris_data";
+  static const keuanganMusolah = "/keuangan_musolah";
   static const unauthorized = "/unauthorized";
   static Widget _buildGuardedRoute({
     required Widget page,
@@ -56,6 +58,7 @@ class AppRoutes {
         UserRole.bendahara,
         UserRole.sekertaris,
         UserRole.petugas,
+        UserRole.pengurusMusolah,
         UserRole.warga,
       ],
     ),
@@ -122,12 +125,22 @@ class AppRoutes {
         UserRole.bendahara,
         UserRole.sekertaris,
         UserRole.petugas,
+        UserRole.pengurusMusolah,
         UserRole.warga,
       ],
     ),
     sekertarisData: (_) => _buildGuardedRoute(
       page: const SekertarisDataPage(),
       allowedRoles: [UserRole.admin, UserRole.ketua, UserRole.sekertaris],
+    ),
+    keuanganMusolah: (_) => _buildGuardedRoute(
+      page: const KeuanganMusolahPage(),
+      allowedRoles: [
+        UserRole.admin,
+        UserRole.ketua,
+        UserRole.bendahara,
+        UserRole.pengurusMusolah,
+      ],
     ),
     unauthorized: (_) => const UnauthorizedPage(), // Tambahkan rute ini juga
   };

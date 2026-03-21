@@ -10,6 +10,7 @@ enum UserRole {
   bendahara,
   sekertaris,
   petugas,
+  pengurusMusolah,
   warga,
   unauthenticated,
 }
@@ -87,7 +88,7 @@ class AuthService {
 
     final roleString = (data['role'] ?? 'warga').toString().toLowerCase();
     final role = UserRole.values.firstWhere(
-      (e) => e.toString() == 'UserRole.$roleString',
+      (e) => e.name.toLowerCase() == roleString.replaceAll('_', ''),
       orElse: () => UserRole.unauthenticated,
     );
 
