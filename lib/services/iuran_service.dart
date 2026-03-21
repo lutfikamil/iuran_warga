@@ -70,6 +70,8 @@ class IuranService {
 
       batch.set(ref, {
         "wargaId": warga.id,
+        "namaSnapshot": wargaData['nama'] ?? '',
+        "rumahSnapshot": wargaData['rumah'] ?? '',
         "bulan": bulan,
         "tahun": tahun,
         "jumlah": iuranAmount,
@@ -169,6 +171,8 @@ class IuranService {
 
       batch.set(ref, {
         'wargaId': wargaId,
+        'namaSnapshot': dataWarga['nama'] ?? '',
+        'rumahSnapshot': dataWarga['rumah'] ?? '',
         'bulan': bulan,
         'tahun': tahun,
         'jumlah': iuranAmount,

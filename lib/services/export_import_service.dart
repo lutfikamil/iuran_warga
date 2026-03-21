@@ -13,6 +13,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'users_service.dart';
 import 'whatsapp_service.dart';
+import 'warga_lifecycle_service.dart';
 
 class ExportImportService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -343,7 +344,7 @@ class ExportImportService {
             }
 
             /// 🔥 NORMALISASI RUMAH (SAMA DENGAN AddWargaPage)
-            final rumahData = _generateRumahData(rumahRaw);
+            final rumahData = WargaLifecycleService().normalizeRumahData(rumahRaw);
             final rumah = rumahData['rumah'];
             final blok = rumahData['blok'];
             final nomor = rumahData['nomor'];
@@ -502,14 +503,4 @@ Pengurus Perumahan Mulia Land Patria.
     return hp.isNotEmpty ? hp : rumah;
   }
 
-  static Map<String, dynamic> _generateRumahData(String rumah) {
-    final upper = rumah.toUpperCase();
-
-    final huruf = upper.replaceAll(RegExp(r'[^A-Z]'), '');
-    final angkaStr = upper.replaceAll(RegExp(r'[^0-9]'), '');
-    final angka = int.tryParse(angkaStr) ?? 0;
-    final angkaFormatted = angka.toString().padLeft(2, '0');
-
-    return {'rumah': '$huruf$angkaFormatted', 'blok': huruf, 'nomor': angka};
-  }
 }

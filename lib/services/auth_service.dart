@@ -86,6 +86,10 @@ class AuthService {
       throw Exception('Password salah');
     }
 
+    if (data['isActive'] == false) {
+      throw Exception('Akun sudah tidak aktif');
+    }
+
     final roleString = (data['role'] ?? 'warga').toString().toLowerCase();
     final role = UserRole.values.firstWhere(
       (e) => e.name.toLowerCase() == roleString.replaceAll('_', ''),

@@ -64,6 +64,7 @@ Future<void> upsertUserLogin({
     'identifier': identifier,
     'role': role,
     'password': passwordHash,
+    'isActive': true,
     'updatedAt': FieldValue.serverTimestamp(),
     'createdAt': currentData['createdAt'] ?? FieldValue.serverTimestamp(),
   }, SetOptions(merge: true));
