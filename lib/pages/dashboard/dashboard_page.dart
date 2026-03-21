@@ -7,9 +7,14 @@ import '../../widgets/dashboard/dashboard_stat.dart';
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
+  String get _role => (SessionService.getRole() ?? '').toLowerCase();
+
   bool get _showSekertarisMenu {
-    final role = (SessionService.getRole() ?? '').toLowerCase();
-    return role == 'admin' || role == 'ketua' || role == 'sekertaris';
+    return _role == 'admin' || _role == 'ketua' || _role == 'sekertaris';
+  }
+
+  bool get _showMusolahMenu {
+    return _role == 'admin' || _role == 'ketua' || _role == 'bendahara' || _role == 'pengurus_musolah';
   }
 
   /// =========================
@@ -61,6 +66,15 @@ class DashboardPage extends StatelessWidget {
         "icon": Icons.assignment,
         "route": AppRoutes.sekertarisData,
         "color": Colors.teal,
+      });
+    }
+
+    if (_showMusolahMenu) {
+      items.add({
+        "title": "Keuangan Musolah",
+        "icon": Icons.mosque,
+        "route": AppRoutes.keuanganMusolah,
+        "color": Colors.deepPurple,
       });
     }
 

@@ -31,6 +31,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
     'bendahara',
     'sekertaris',
     'petugas',
+    'pengurus_musolah',
     'warga',
   ];
 
