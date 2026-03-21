@@ -3,9 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/iuran_service.dart';
-import '../../services/log_service.dart';
 import '../../utils/bulan_util.dart';
 import 'add_warga_page.dart';
+import 'mutasi_warga_page.dart';
 
 class DetailWargaPage extends StatelessWidget {
   final String wargaId;
@@ -16,7 +16,7 @@ class DetailWargaPage extends StatelessWidget {
 
   Future<Map<String, dynamic>> _loadInitialData() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) throw Exception("User belum login");
+    if (uid == null) throw Exception('User belum login');
 
     final wargaSnap = await FirebaseFirestore.instance
         .collection('warga')
@@ -32,59 +32,6 @@ class DetailWargaPage extends StatelessWidget {
       'warga': wargaSnap.data(),
       'role': (userSnap.data()?['role'] ?? 'warga').toString().toLowerCase(),
     };
-  }
-
-  Future<void> _deleteWarga(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Hapus Warga"),
-        content: const Text("Yakin ingin menghapus warga ini?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Batal"),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Hapus"),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    try {
-      await FirebaseFirestore.instance
-          .collection("warga")
-          .doc(wargaId)
-          .delete();
-
-      await FirebaseFirestore.instance
-          .collection("users")
-          .doc(wargaId)
-          .delete();
-
-      await LogService().logEvent(
-        action: 'hapus_warga',
-        target: 'warga',
-        detail: 'Hapus warga id=$wargaId',
-      );
-
-      if (context.mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Warga berhasil dihapus")));
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error: $e")));
-      }
-    }
   }
 
   @override
@@ -110,7 +57,7 @@ class DetailWargaPage extends StatelessWidget {
           final role = snapshot.data!['role'] as String;
 
           if (wargaData == null) {
-            return const Center(child: Text("Data tidak ditemukan"));
+            return const Center(child: Text('Data tidak ditemukan'));
           }
 
           return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -121,13 +68,11 @@ class DetailWargaPage extends StatelessWidget {
               }
 
               final docs = iuranSnapshot.data!.docs;
-
               final totalBayar = docs.fold<num>(0, (total, doc) {
                 final data = doc.data();
                 if (data['status'] != 'lunas') return total;
                 return total + ((data['jumlah'] as num?) ?? 0);
               });
-
               final totalTransaksi = docs
                   .where((e) => e.data()['status'] == 'lunas')
                   .length;
@@ -142,7 +87,7 @@ class DetailWargaPage extends StatelessWidget {
                     const SizedBox(height: 16),
                     _rekapCard(docs, role, context),
                     const SizedBox(height: 20),
-                    _actionButtons(context),
+                    _actionButtons(context, wargaData),
                   ],
                 ),
               );
@@ -169,6 +114,7 @@ class DetailWargaPage extends StatelessWidget {
             _info('Rumah', data['rumah']),
             _info('HP', data['hp']),
             _info('Status', data['status']),
+            _info('Iuran Aktif', data['iuranAktif'] == true ? 'Ya' : 'Tidak'),
           ],
         ),
       ),
@@ -214,15 +160,15 @@ class DetailWargaPage extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            const Text("Rekap Pembayaran"),
+            const Text('Rekap Pembayaran'),
             const SizedBox(height: 10),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
                 columns: [
-                  const DataColumn(label: Text("Bulan")),
+                  const DataColumn(label: Text('Bulan')),
                   ...tahunList.map((t) => DataColumn(label: Text('$t'))),
-                  if (canPay) const DataColumn(label: Text("Aksi")),
+                  if (canPay) const DataColumn(label: Text('Aksi')),
                 ],
                 rows: bulanUtil.bulanList.map((bulan) {
                   final unpaid = docs
@@ -278,9 +224,9 @@ class DetailWargaPage extends StatelessWidget {
         tahun: tahun,
       );
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Berhasil bayar $bulan $tahun')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Berhasil bayar $bulan $tahun')),
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -291,9 +237,11 @@ class DetailWargaPage extends StatelessWidget {
     }
   }
 
-  Widget _actionButtons(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+  Widget _actionButtons(BuildContext context, Map<String, dynamic> wargaData) {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 12,
+      runSpacing: 12,
       children: [
         ElevatedButton.icon(
           icon: const Icon(Icons.edit),
@@ -304,10 +252,18 @@ class DetailWargaPage extends StatelessWidget {
           ),
         ),
         ElevatedButton.icon(
-          icon: const Icon(Icons.delete),
-          label: const Text('Hapus'),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          onPressed: () => _deleteWarga(context),
+          icon: const Icon(Icons.swap_horiz),
+          label: const Text('Mutasi'),
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MutasiWargaPage(
+                wargaId: wargaId,
+                nama: (wargaData['nama'] ?? '').toString(),
+                rumah: (wargaData['rumah'] ?? '').toString(),
+              ),
+            ),
+          ),
         ),
       ],
     );

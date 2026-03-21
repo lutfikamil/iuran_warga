@@ -5,6 +5,7 @@ import '../../services/iuran_service.dart';
 import '../../services/log_service.dart';
 import '../../services/whatsapp_service.dart';
 import '../../services/users_service.dart';
+import '../../services/warga_lifecycle_service.dart';
 
 class AddWargaPage extends StatefulWidget {
   final String? wargaId;
@@ -92,7 +93,9 @@ class _AddWargaPageState extends State<AddWargaPage> {
 
     try {
       final nama = _namaController.text.trim();
-      final rumahData = _generateRumahData(_rumahController.text.trim());
+      final rumahData = WargaLifecycleService().normalizeRumahData(
+        _rumahController.text.trim(),
+      );
 
       final rumah = rumahData['rumah'];
       final blok = rumahData['blok'];
@@ -239,17 +242,6 @@ Pengurus Perumahan Mulia Land Patria.
     } finally {
       setState(() => _isLoading = false);
     }
-  }
-
-  Map<String, dynamic> _generateRumahData(String rumah) {
-    final upper = rumah.toUpperCase();
-
-    final huruf = upper.replaceAll(RegExp(r'[^A-Z]'), '');
-    final angkaStr = upper.replaceAll(RegExp(r'[^0-9]'), '');
-    final angka = int.tryParse(angkaStr) ?? 0;
-    final angkaFormatted = angka.toString().padLeft(2, '0');
-
-    return {'rumah': '$huruf$angkaFormatted', 'blok': huruf, 'nomor': angka};
   }
 
   @override

@@ -3,6 +3,7 @@ import '../pages/laporan/laporan_page.dart';
 import '../pages/login/login_page.dart';
 import '../pages/dashboard/dashboard_page.dart';
 import '../pages/warga/warga_page.dart';
+import '../pages/warga/warga_keluar_page.dart';
 import '../pages/pembayaran/pembayaran_page.dart';
 import '../pages/laporan/rekap_laporan_page.dart';
 import '../pages/pengeluaran/pengeluaran_page.dart';
@@ -22,6 +23,7 @@ class AppRoutes {
   static const dashboard = "/dashboard";
   static const warga = "/warga";
   static const pembayaran = "/pembayaran";
+  static const wargaKeluar = "/warga_keluar";
   static const pengeluaran = "/pengeluaran";
   static const addPengeluaran = "/add_pengeluaran";
   static const pemasukan = "/pemasukan";
@@ -74,6 +76,16 @@ class AppRoutes {
     pembayaran: (_) => _buildGuardedRoute(
       page: const PembayaranPage(),
       allowedRoles: [UserRole.admin, UserRole.bendahara, UserRole.petugas],
+    ),
+    wargaKeluar: (_) => _buildGuardedRoute(
+      page: const WargaKeluarPage(),
+      allowedRoles: [
+        UserRole.admin,
+        UserRole.ketua,
+        UserRole.bendahara,
+        UserRole.sekertaris,
+        UserRole.petugas,
+      ],
     ),
     pengeluaran: (_) => _buildGuardedRoute(
       page: const PengeluaranPage(),

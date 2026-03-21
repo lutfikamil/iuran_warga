@@ -9,6 +9,7 @@ import '../../services/auth_service.dart';
 import '../../services/session_service.dart';
 import '../../models/warga_model.dart';
 import 'generate_iuran_page.dart';
+import 'warga_keluar_page.dart';
 import '../../utils/bulan_util.dart';
 
 class WargaPage extends StatefulWidget {
@@ -149,6 +150,18 @@ class _WargaPageState extends State<WargaPage> {
                   : const Icon(Icons.send),
               tooltip: "Kirim Tagihan Bulan Ini",
               onPressed: _isSendingTagihan ? null : _kirimTagihanBulanIni,
+            ),
+            IconButton(
+              icon: const Icon(Icons.archive_outlined),
+              tooltip: 'Arsip Warga Keluar',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WargaKeluarPage(),
+                  ),
+                );
+              },
             ),
             IconButton(
               icon: const Icon(Icons.add),
