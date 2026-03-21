@@ -5,7 +5,7 @@ import '../pages/dashboard/dashboard_page.dart';
 import '../pages/warga/warga_page.dart';
 import '../pages/warga/warga_keluar_page.dart';
 import '../pages/pembayaran/pembayaran_page.dart';
-import '../pages/laporan/rekap_laporan_page.dart';
+import '../pages/laporan/laporan_global_page.dart';
 import '../pages/pengeluaran/pengeluaran_page.dart';
 import '../pages/pengeluaran/add_pengeluaran_page.dart';
 import '../pages/pemasukan/pemasukan_page.dart';
@@ -113,7 +113,7 @@ class AppRoutes {
       ],
     ),
     laporanGlobal: (_) => _buildGuardedRoute(
-      page: const RekapLaporanPage(),
+      page: const LaporanGlobalPage(),
       allowedRoles: [UserRole.admin, UserRole.ketua],
     ),
     //daftarIuran: (_) => _buildGuardedRoute(

@@ -36,7 +36,9 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
 
   bool get _canInputTransaksi {
     final role = (SessionService.getRole() ?? '').toLowerCase();
-    return role == 'pengurus_musolah';
+    return role ==
+        'petugas_musolah'
+            'admin';
   }
 
   String _formatRupiah(num number) {
@@ -54,32 +56,38 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
     return DateFormat('dd MMM yyyy', 'id_ID').format(tanggal);
   }
 
-  List<Map<String, dynamic>> _withRunningBalance(List<QueryDocumentSnapshot> docs) {
+  List<Map<String, dynamic>> _withRunningBalance(
+    List<QueryDocumentSnapshot> docs,
+  ) {
     double saldo = 0;
-    return docs.where((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return (data['kategoriKas'] ?? '').toString().toLowerCase() == 'musolah';
-    }).map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      final jenis = (data['jenis'] ?? 'masuk').toString();
-      final jumlah = (data['jumlah'] as num?)?.toDouble() ?? 0;
+    return docs
+        .where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return (data['kategoriKas'] ?? '').toString().toLowerCase() ==
+              'musolah';
+        })
+        .map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final jenis = (data['jenis'] ?? 'masuk').toString();
+          final jumlah = (data['jumlah'] as num?)?.toDouble() ?? 0;
 
-      if (jenis == 'masuk') {
-        saldo += jumlah;
-      } else {
-        saldo -= jumlah;
-      }
+          if (jenis == 'masuk') {
+            saldo += jumlah;
+          } else {
+            saldo -= jumlah;
+          }
 
-      return {
-        'id': doc.id,
-        'tanggal': data['tanggal'] as Timestamp?,
-        'jenis': jenis,
-        'jumlah': jumlah,
-        'petugas': (data['petugas'] ?? '-').toString(),
-        'keterangan': (data['keterangan'] ?? '-').toString(),
-        'saldo': saldo,
-      };
-    }).toList();
+          return {
+            'id': doc.id,
+            'tanggal': data['tanggal'] as Timestamp?,
+            'jenis': jenis,
+            'jumlah': jumlah,
+            'petugas': (data['petugas'] ?? '-').toString(),
+            'keterangan': (data['keterangan'] ?? '-').toString(),
+            'saldo': saldo,
+          };
+        })
+        .toList();
   }
 
   List<Map<String, dynamic>> _filterRows(List<Map<String, dynamic>> rows) {
@@ -139,7 +147,7 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
                   'updatedAt': FieldValue.serverTimestamp(),
                 });
 
-                if (!mounted) return;
+                if (!dialogContext.mounted) return;
                 Navigator.of(dialogContext).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -162,7 +170,9 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
 
             return AlertDialog(
               title: Text(
-                jenis == 'masuk' ? 'Input Pemasukan Musolah' : 'Input Pengeluaran Musolah',
+                jenis == 'masuk'
+                    ? 'Input Pemasukan Musolah'
+                    : 'Input Pengeluaran Musolah',
               ),
               content: SizedBox(
                 width: 420,
@@ -229,7 +239,9 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
               ),
               actions: [
                 TextButton(
-                  onPressed: isSaving ? null : () => Navigator.of(dialogContext).pop(),
+                  onPressed: isSaving
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
                   child: const Text('Batal'),
                 ),
                 ElevatedButton(
@@ -284,7 +296,8 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
     }
 
     await FileSaver.instance.saveFile(
-      name: 'keuangan_musolah_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}',
+      name:
+          'keuangan_musolah_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}',
       bytes: Uint8List.fromList(bytes),
       ext: 'xlsx',
       mimeType: MimeType.microsoftExcel,
@@ -303,7 +316,15 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
           ),
           pw.SizedBox(height: 12),
           pw.TableHelper.fromTextArray(
-            headers: const ['No', 'Tanggal', 'Masuk', 'Keluar', 'Saldo', 'Petugas', 'Keterangan'],
+            headers: const [
+              'No',
+              'Tanggal',
+              'Masuk',
+              'Keluar',
+              'Saldo',
+              'Petugas',
+              'Keterangan',
+            ],
             data: List.generate(rows.length, (index) {
               final row = rows[index];
               final isMasuk = row['jenis'] == 'masuk';
@@ -327,7 +348,8 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
     );
 
     await FileSaver.instance.saveFile(
-      name: 'keuangan_musolah_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}',
+      name:
+          'keuangan_musolah_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}',
       bytes: Uint8List.fromList(await pdf.save()),
       ext: 'pdf',
       mimeType: MimeType.pdf,
@@ -346,14 +368,14 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
     try {
       await exporter(rows);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Export berhasil dibuat.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Export berhasil dibuat.')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Export gagal: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Export gagal: $e')));
     } finally {
       if (mounted) {
         setState(() => _isExporting = false);
@@ -387,10 +409,22 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
       ),
       children: [
         _DataCell(text: '${index + 1}', align: TextAlign.center),
-        _DataCell(text: _formatTanggal(row['tanggal'] as Timestamp?), align: TextAlign.center),
-        _DataCell(text: isMasuk ? _formatRupiah(jumlah) : '-', align: TextAlign.right),
-        _DataCell(text: !isMasuk ? _formatRupiah(jumlah) : '-', align: TextAlign.right),
-        _DataCell(text: _formatRupiah((row['saldo'] as num?) ?? 0), align: TextAlign.right),
+        _DataCell(
+          text: _formatTanggal(row['tanggal'] as Timestamp?),
+          align: TextAlign.center,
+        ),
+        _DataCell(
+          text: isMasuk ? _formatRupiah(jumlah) : '-',
+          align: TextAlign.right,
+        ),
+        _DataCell(
+          text: !isMasuk ? _formatRupiah(jumlah) : '-',
+          align: TextAlign.right,
+        ),
+        _DataCell(
+          text: _formatRupiah((row['saldo'] as num?) ?? 0),
+          align: TextAlign.right,
+        ),
         _DataCell(text: (row['petugas'] ?? '-').toString()),
         _DataCell(text: (row['keterangan'] ?? '-').toString()),
       ],
@@ -413,7 +447,7 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
         actions: [
           if (_canInputTransaksi)
             PopupMenuButton<String>(
-              tooltip: 'Transaksi',
+              tooltip: 'Menu Transaksi',
               onSelected: _showTransactionForm,
               itemBuilder: (context) => const [
                 PopupMenuItem(value: 'masuk', child: Text('Pemasukan')),
@@ -425,7 +459,7 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
                   children: [
                     Icon(Icons.swap_horiz),
                     SizedBox(width: 6),
-                    Text('Transaksi'),
+                    Text('Menu Transaksi'),
                   ],
                 ),
               ),
@@ -457,7 +491,8 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
                       child: TextField(
                         controller: _searchController,
                         decoration: InputDecoration(
-                          hintText: 'Cari tanggal, nominal, petugas, atau keterangan...',
+                          hintText:
+                              'Cari tanggal, nominal, petugas, atau keterangan...',
                           prefixIcon: const Icon(Icons.search),
                           suffixIcon: _searchQuery.isEmpty
                               ? null
@@ -471,7 +506,9 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
                           border: const OutlineInputBorder(),
                         ),
                         onChanged: (value) {
-                          setState(() => _searchQuery = value.trim().toLowerCase());
+                          setState(
+                            () => _searchQuery = value.trim().toLowerCase(),
+                          );
                         },
                       ),
                     ),
@@ -517,7 +554,9 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
                               child: SingleChildScrollView(
                                 controller: _verticalScrollController,
                                 child: Table(
-                                  border: TableBorder.all(color: Colors.grey.shade300),
+                                  border: TableBorder.all(
+                                    color: Colors.grey.shade300,
+                                  ),
                                   columnWidths: const {
                                     0: FixedColumnWidth(_colWidthNo),
                                     1: FixedColumnWidth(_colWidthTanggal),
@@ -529,7 +568,11 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
                                   },
                                   children: [
                                     _buildHeaderRow(),
-                                    ...List.generate(rows.length, (index) => _buildDataRow(index, rows[index])),
+                                    ...List.generate(
+                                      rows.length,
+                                      (index) =>
+                                          _buildDataRow(index, rows[index]),
+                                    ),
                                   ],
                                 ),
                               ),
