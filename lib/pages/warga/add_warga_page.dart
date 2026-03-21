@@ -68,7 +68,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
         final data = doc.data()!;
         _namaController.text = data['nama'] ?? '';
         _rumahController.text = data['rumah'] ?? '';
-        _hpController.text = data['hp'] ?? '';
+        _hpController.text = data['noHpPenghuni'] ?? '';
         _selectedStatus = data['status'] ?? _statusOptions.first;
         _selectedRole = (data['role'] ?? 'warga').toString().toLowerCase();
         _isIuranAktifUntukRumahKosong =
@@ -117,7 +117,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
         'rumah': rumah,
         'blok': blok,
         'nomor': nomor,
-        'hp': hp,
+        'noHpPenghuni': hp,
         'status': _selectedStatus,
         'iuranAktif': isRumahKosong ? _isIuranAktifUntukRumahKosong : true,
         'role': _selectedRole,
@@ -139,7 +139,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
           wargaId: wargaId,
           nama: nama,
           rumah: rumah,
-          hp: hp,
+          noHpPenghuni: hp,
           role: _selectedRole,
           identifier: identifier,
           newRawPassword: password,
@@ -172,7 +172,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
           wargaId: wargaId,
           nama: nama,
           rumah: rumah,
-          hp: hp,
+          noHpPenghuni: hp,
           role: _selectedRole,
           identifier: identifier,
           newRawPassword: password,

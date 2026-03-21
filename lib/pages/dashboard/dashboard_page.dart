@@ -22,6 +22,7 @@ class DashboardPage extends StatelessWidget {
   List<Map<String, dynamic>> get menus {
     final items = [
       _menu("Profile", Icons.person, AppRoutes.profile),
+      _menu("Laporan Global", Icons.book, AppRoutes.laporanGlobal),
       _menu("Data Warga", Icons.people, AppRoutes.warga, Colors.blue),
       _menu(
         "Pemasukan Iuran",
@@ -42,13 +43,12 @@ class DashboardPage extends StatelessWidget {
         Colors.red,
       ),
       _menu("Laporan", Icons.bar_chart, AppRoutes.laporan),
-      _menu("Laporan Global", Icons.book, AppRoutes.laporanGlobal),
       _menu("Pengaturan", Icons.settings, AppRoutes.settings),
     ];
 
     if (_showSekertarisMenu) {
       items.insert(
-        2,
+        7,
         _menu(
           "Data Sekertaris",
           Icons.assignment,
@@ -64,7 +64,7 @@ class DashboardPage extends StatelessWidget {
           "Keuangan Musolah",
           Icons.mosque,
           AppRoutes.keuanganMusolah,
-          Colors.deepPurple,
+          Colors.green[700],
         ),
       );
     }

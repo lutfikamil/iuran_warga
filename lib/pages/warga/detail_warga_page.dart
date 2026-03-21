@@ -112,7 +112,7 @@ class DetailWargaPage extends StatelessWidget {
             ),
             const Divider(),
             _info('Rumah', data['rumah']),
-            _info('HP', data['hp']),
+            _info('HP', data['noHpPenghuni']),
             _info('Status', data['status']),
             _info('Iuran Aktif', data['iuranAktif'] == true ? 'Ya' : 'Tidak'),
           ],
@@ -224,9 +224,9 @@ class DetailWargaPage extends StatelessWidget {
         tahun: tahun,
       );
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Berhasil bayar $bulan $tahun')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Berhasil bayar $bulan $tahun')));
       }
     } catch (e) {
       if (context.mounted) {

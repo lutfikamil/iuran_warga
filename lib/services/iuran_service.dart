@@ -328,7 +328,7 @@ Pengurus Perumahan Mulia Land Patria.
 
     final wargaSnapshot = await _firestore
         .collection("warga")
-        .where("hp", isGreaterThan: "")
+        .where("noHpPenghuni", isGreaterThan: "")
         .where("iuranAktif", isEqualTo: true)
         .get();
 
@@ -352,7 +352,7 @@ Pengurus Perumahan Mulia Land Patria.
       if (warga == null) continue;
 
       final nama = warga['nama'] ?? '';
-      final hp = warga['hp'] ?? '';
+      final hp = warga['noHpPenghuni'] ?? '';
 
       if (hp.isEmpty) continue;
 
@@ -384,68 +384,4 @@ Pengurus Perumahan Mulia Land Patria.
 
     return sent;
   }
-
-  //  Future<void> kirimTagihanBulananOtomatis() async {
-  //    final now = DateTime.now();
-  //    final bulan = BulanUtil.toStringMonth(now.month);
-  //    final tahun = now.year;
-  //
-  //    /// 🔥 ambil hanya bulan ini + belum dikirim
-  //    final iuranSnapshot = await _firestore
-  //        .collection("iuran")
-  //        .where("bulan", isEqualTo: bulan)
-  //        .where("tahun", isEqualTo: tahun)
-  //        .where("notifTerkirim", isEqualTo: false)
-  //        .get();
-  //
-  //    final wargaSnapshot = await _firestore.collection("warga").where("iuranAktif", isEqualTo: true).get();
-  //
-  //    final Map<String, Map<String, dynamic>> wargaMap = {
-  //      for (var w in wargaSnapshot.docs) w.id: w.data(),
-  //    };
-  //
-  //    WriteBatch batch = _firestore.batch();
-  //    int sent = 0;
-  //
-  //    for (var doc in iuranSnapshot.docs) {
-  //      final data = doc.data();
-  //
-  //      /// skip kalau sudah lunas
-  //      if (data['status'] == 'lunas') continue;
-  //
-  //      final warga = wargaMap[data['wargaId']];
-  //      if (warga == null) continue;
-  //
-  //      final nama = warga['nama'] ?? '';
-  //      final hp = warga['hp'] ?? '';
-  //
-  //      if (hp.isEmpty) continue;
-  //
-  //      try {
-  //        await kirimTagihan(
-  //          nama: nama,
-  //          hp: hp,
-  //          bulan: bulan,
-  //          tahun: tahun,
-  //          jumlah: data['jumlah'],
-  //        );
-  //
-  //        /// 🔥 tandai sudah kirim
-  //        batch.update(doc.reference, {
-  //          "notifTerkirim": true,
-  //          "updatedAt": FieldValue.serverTimestamp(),
-  //        });
-  //
-  //        sent++;
-  //
-  //        await Future.delayed(const Duration(seconds: 5));
-  //      } catch (e) {
-  //        _log("Gagal kirim ke $nama: $e");
-  //      }
-  //    }
-  //
-  //    await batch.commit();
-  //
-  //    _log("Berhasil kirim $sent tagihan bulan $bulan");
-  //  }
 }

@@ -95,7 +95,7 @@ class ExportImportService {
           TextCellValue((i + 1).toString()),
           TextCellValue(data["rumah"] ?? '-'),
           TextCellValue(data["nama"] ?? '-'),
-          TextCellValue(data["hp"] ?? '-'),
+          TextCellValue(data["noHpPenghuni"] ?? '-'),
           TextCellValue(data["status"] ?? '-'),
           TextCellValue(data["role"] ?? 'warga'),
           TextCellValue(data["tanggalBergabung"] ?? '-'),
@@ -190,7 +190,7 @@ class ExportImportService {
         (i + 1).toString(),
         wargaData["rumah"] ?? '-',
         wargaData["nama"] ?? '-',
-        wargaData["hp"] ?? '-',
+        wargaData["noHpPenghuni"] ?? '-',
         wargaData["status"] ?? '-',
         wargaData["role"] ?? 'warga',
       ]);
@@ -344,7 +344,9 @@ class ExportImportService {
             }
 
             /// 🔥 NORMALISASI RUMAH (SAMA DENGAN AddWargaPage)
-            final rumahData = WargaLifecycleService().normalizeRumahData(rumahRaw);
+            final rumahData = WargaLifecycleService().normalizeRumahData(
+              rumahRaw,
+            );
             final rumah = rumahData['rumah'];
             final blok = rumahData['blok'];
             final nomor = rumahData['nomor'];
@@ -354,7 +356,7 @@ class ExportImportService {
               'nama': nama,
               'blok': blok,
               'nomor': nomor,
-              'hp': hp,
+              'noHpPenghuni': hp,
               'status': status,
               'role': role.isEmpty ? 'warga' : role,
               'tanggalBergabung': tanggal,
@@ -383,7 +385,7 @@ class ExportImportService {
               'wargaId': ref.id,
               'nama': nama,
               'rumah': rumah,
-              'hp': hp,
+              'noHpPenghuni': hp,
               'role': wargaData['role'],
             });
 
@@ -409,7 +411,7 @@ class ExportImportService {
       for (final user in usersToCreate) {
         try {
           final nama = user['nama'];
-          final hp = user['hp'];
+          final hp = user['noHpPenghuni'];
           final rumah = user['rumah'];
 
           final identifier = _resolveIdentifier(hp, rumah);
@@ -419,7 +421,7 @@ class ExportImportService {
             wargaId: user['wargaId'],
             nama: nama,
             rumah: rumah,
-            hp: hp,
+            noHpPenghuni: hp,
             role: user['role'],
             identifier: identifier,
             newRawPassword: defaultPassword,
@@ -502,5 +504,4 @@ Pengurus Perumahan Mulia Land Patria.
   static String _resolveIdentifier(String hp, String rumah) {
     return hp.isNotEmpty ? hp : rumah;
   }
-
 }

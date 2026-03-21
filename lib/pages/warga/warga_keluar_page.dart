@@ -49,7 +49,7 @@ class WargaKeluarPage extends StatelessWidget {
                       const SizedBox(height: 6),
                       Text('Rumah terakhir: ${data['rumahTerakhir'] ?? '-'}'),
                       Text('Status keluar: ${data['statusKeluar'] ?? '-'}'),
-                      Text('HP: ${data['hp'] ?? '-'}'),
+                      Text('HP: ${data['noHpPenghuni'] ?? '-'}'),
                       Text(
                         'Diarsipkan: ${_formatTimestamp(data['archivedAt'])}',
                       ),

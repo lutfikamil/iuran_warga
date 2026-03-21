@@ -236,7 +236,7 @@ class _WargaPageState extends State<WargaPage> {
                 final data = doc.data() as Map<String, dynamic>;
                 final nama = data["nama"]?.toLowerCase() ?? '';
                 final rumah = data["rumah"]?.toLowerCase() ?? '';
-                final hp = data["hp"]?.toLowerCase() ?? '';
+                final hp = data["noHpPenghuni"]?.toLowerCase() ?? '';
                 final status = data["status"]?.toLowerCase() ?? '';
 
                 return nama.contains(_searchQuery) ||
@@ -306,7 +306,7 @@ class _WargaPageState extends State<WargaPage> {
                   Text("${index + 1}", textAlign: TextAlign.center),
                   Text(warga.rumah, textAlign: TextAlign.center),
                   Text(warga.nama),
-                  Text(warga.hp),
+                  Text(warga.noHpPenghuni),
                   Text(warga.status, textAlign: TextAlign.center),
                   Text(
                     statusText,
@@ -566,7 +566,7 @@ class _WargaPageState extends State<WargaPage> {
 
           final warga = wargaDoc.data()!;
           final nama = warga["nama"] ?? '-';
-          final hp = warga["hp"] ?? '';
+          final hp = warga["noHpPenghuni"] ?? '';
 
           if (hp.toString().isEmpty) continue;
 

@@ -304,68 +304,68 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
   }
 
   /// IMPORT EXCEL
-  Future<void> _importExcel() async {
-    if (!_canEdit) return;
-
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['xlsx'],
-    );
-
-    if (result == null || result.files.single.bytes == null) return;
-
-    final bytes = result.files.single.bytes!;
-    final excel = Excel.decodeBytes(bytes);
-    final sheet = excel.tables[excel.tables.keys.first];
-
-    if (sheet == null || sheet.rows.isEmpty) return;
-
-    final headerRow = sheet.rows.first
-        .map((c) => c?.value?.toString().trim() ?? '')
-        .toList();
-    final colIndex = {
-      for (var i = 0; i < headerRow.length; i++) headerRow[i]: i,
-    };
-
-    if (!_headers.every((h) => colIndex.containsKey(h))) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Format Excel tidak cocok dengan header'),
-          ),
-        );
-      }
-      return;
-    }
-
-    final batch = _firestore.batch();
-    for (var i = 1; i < sheet.rows.length; i++) {
-      final row = sheet.rows[i];
-      if (row.isEmpty) continue;
-
-      final data = <String, dynamic>{
-        for (final h in _headers) h: row[colIndex[h]!]?.value?.toString() ?? '',
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-
-      final docRef = _firestore.collection('data_sekertaris').doc();
-      batch.set(docRef, data);
-    }
-
-    await batch.commit();
-
-    await LogService().logEvent(
-      action: 'import_data_sekertaris',
-      target: 'data_sekertaris',
-      detail: 'Import ${sheet.rows.length - 1} baris dari Excel',
-    );
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Import Excel berhasil')));
-    }
-  }
+  //  Future<void> _importExcel() async {
+  //    if (!_canEdit) return;
+  //
+  //    final result = await FilePicker.platform.pickFiles(
+  //      type: FileType.custom,
+  //      allowedExtensions: ['xlsx'],
+  //    );
+  //
+  //    if (result == null || result.files.single.bytes == null) return;
+  //
+  //    final bytes = result.files.single.bytes!;
+  //    final excel = Excel.decodeBytes(bytes);
+  //    final sheet = excel.tables[excel.tables.keys.first];
+  //
+  //    if (sheet == null || sheet.rows.isEmpty) return;
+  //
+  //    final headerRow = sheet.rows.first
+  //        .map((c) => c?.value?.toString().trim() ?? '')
+  //        .toList();
+  //    final colIndex = {
+  //      for (var i = 0; i < headerRow.length; i++) headerRow[i]: i,
+  //    };
+  //
+  //    if (!_headers.every((h) => colIndex.containsKey(h))) {
+  //      if (mounted) {
+  //        ScaffoldMessenger.of(context).showSnackBar(
+  //          const SnackBar(
+  //            content: Text('Format Excel tidak cocok dengan header'),
+  //          ),
+  //        );
+  //      }
+  //      return;
+  //    }
+  //
+  //    final batch = _firestore.batch();
+  //    for (var i = 1; i < sheet.rows.length; i++) {
+  //      final row = sheet.rows[i];
+  //      if (row.isEmpty) continue;
+  //
+  //      final data = <String, dynamic>{
+  //        for (final h in _headers) h: row[colIndex[h]!]?.value?.toString() ?? '',
+  //        'createdAt': FieldValue.serverTimestamp(),
+  //        'updatedAt': FieldValue.serverTimestamp(),
+  //      };
+  //
+  //      final docRef = _firestore.collection('data_sekertaris').doc();
+  //      batch.set(docRef, data);
+  //    }
+  //
+  //    await batch.commit();
+  //
+  //    await LogService().logEvent(
+  //      action: 'import_data_sekertaris',
+  //      target: 'data_sekertaris',
+  //      detail: 'Import ${sheet.rows.length - 1} baris dari Excel',
+  //    );
+  //    if (mounted) {
+  //      ScaffoldMessenger.of(
+  //        context,
+  //      ).showSnackBar(const SnackBar(content: Text('Import Excel berhasil')));
+  //    }
+  //  }
 
   /// EXPORT PDF
   Future<void> _exportPdf(
@@ -476,11 +476,11 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
         title: const Text('Data Sekertaris'),
         actions: [
           if (_canEdit) ...[
-            IconButton(
-              tooltip: 'Import Excel',
-              onPressed: _importExcel,
-              icon: const Icon(Icons.upload_file),
-            ),
+            //  IconButton(
+            //    tooltip: 'Import Excel',
+            //    onPressed: _importExcel,
+            //    icon: const Icon(Icons.upload_file),
+            //  ),
             IconButton(
               tooltip: 'Export Excel',
               onPressed: () {

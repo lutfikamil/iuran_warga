@@ -80,7 +80,8 @@ class AuthService {
       throw Exception('User tidak ditemukan');
     }
 
-    final data = userDoc.data()!; // Gunakan ! karena sudah dipastikan tidak null
+    final data = userDoc
+        .data()!; // Gunakan ! karena sudah dipastikan tidak null
 
     if (data['password'] != hashPassword(password)) {
       throw Exception('Password salah');
@@ -106,8 +107,9 @@ class AuthService {
   }
 
   Future<DocumentSnapshot<Map<String, dynamic>>?> _findUserByIdentifier(
-      String identifier,) async {
-    final fields = ['identifier', 'hp', 'rumah', 'email'];
+    String identifier,
+  ) async {
+    final fields = ['identifier', 'noHpPenghuni', 'rumah', 'email'];
 
     for (final field in fields) {
       final result = await _db
@@ -153,7 +155,8 @@ class AuthService {
       throw Exception('Akun user tidak ditemukan');
     }
 
-    final userData = userDoc.data()!; // Gunakan ! karena sudah dipastikan tidak null
+    final userData = userDoc
+        .data()!; // Gunakan ! karena sudah dipastikan tidak null
     if (userData['password'] != hashPassword(currentPassword)) {
       throw Exception('Password saat ini salah');
     }

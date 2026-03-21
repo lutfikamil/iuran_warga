@@ -5,8 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/auth_service.dart';
 
 String generateRandomPassword({int length = 10}) {
-  const chars =
-      'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
   final random = Random.secure();
 
   return List.generate(
@@ -19,7 +18,7 @@ Future<void> upsertUserLogin({
   required String wargaId,
   required String nama,
   required String rumah,
-  required String hp,
+  required String noHpPenghuni,
   required String role,
   required String identifier,
   String? newRawPassword,
@@ -60,7 +59,7 @@ Future<void> upsertUserLogin({
     'wargaId': wargaId,
     'nama': nama,
     'rumah': rumah,
-    'hp': hp,
+    'noHpPenghuni': noHpPenghuni,
     'identifier': identifier,
     'role': role,
     'password': passwordHash,
