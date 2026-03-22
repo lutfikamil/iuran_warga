@@ -23,8 +23,7 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  static const List<String> _headers = [
-    'no',
+  static const List<String> _dataHeaders = [
     'rumah',
     'pemilik',
     'noHpPemilik',
@@ -55,7 +54,7 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
 
     final formKey = GlobalKey<FormState>();
     final controllers = {
-      for (final key in _headers)
+      for (final key in _dataHeaders)
         key: TextEditingController(text: (initialData?[key] ?? '').toString()),
     };
 
@@ -75,7 +74,6 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
 
                 final rumah = controllers['rumah']!.text.trim().toUpperCase();
                 final data = <String, dynamic>{
-                  'no': controllers['no']!.text.trim(),
                   'rumah': rumah,
                   'pemilik': controllers['pemilik']!.text.trim(),
                   'noHpPemilik': controllers['noHpPemilik']!.text.trim(),
@@ -93,7 +91,10 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
                     await _firestore
                         .collection('data_sekertaris')
                         .doc(docId)
-                        .set(data, SetOptions(merge: true));
+                        .set({
+                          ...data,
+                          'no': FieldValue.delete(),
+                        }, SetOptions(merge: true));
                   } else {
                     data['createdAt'] = FieldValue.serverTimestamp();
                     await _firestore.collection('data_sekertaris').add(data);
@@ -131,11 +132,6 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildField(
-                            label: 'No',
-                            controller: controllers['no']!,
-                            keyboardType: TextInputType.number,
-                          ),
                           _buildField(
                             label: 'Rumah',
                             controller: controllers['rumah']!,
@@ -283,13 +279,22 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
     final sheet = excel['DataSekertaris'];
 
     // header
-    sheet.appendRow(_headers.map((h) => TextCellValue(h)).toList());
+    sheet.appendRow([
+      const TextCellValue('no'),
+      ..._dataHeaders.map((header) => TextCellValue(header)),
+    ]);
 
     // data
-    for (final doc in docs) {
+    for (var i = 0; i < docs.length; i++) {
+      final doc = docs[i];
       final d = doc.data();
       sheet.appendRow(
-        _headers.map((h) => TextCellValue(d[h]?.toString() ?? '')).toList(),
+        [
+          TextCellValue('${i + 1}'),
+          ..._dataHeaders.map(
+            (header) => TextCellValue(d[header]?.toString() ?? ''),
+          ),
+        ],
       );
     }
 
@@ -383,10 +388,26 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
           ),
           pw.SizedBox(height: 10),
           pw.TableHelper.fromTextArray(
-            headers: _headers,
-            data: docs.map((doc) {
+            headers: const [
+              'No',
+              'Rumah',
+              'Pemilik',
+              'No hp',
+              'Status',
+              'Dihuni oleh',
+              'No. Hp',
+              'No KTP',
+              'No KK',
+              'Keterangan',
+            ],
+            data: docs.asMap().entries.map((entry) {
+              final index = entry.key;
+              final doc = entry.value;
               final d = doc.data();
-              return _headers.map((h) => d[h]?.toString() ?? '').toList();
+              return [
+                '${index + 1}',
+                ..._dataHeaders.map((header) => d[header]?.toString() ?? ''),
+              ];
             }).toList(),
             border: pw.TableBorder.all(),
             headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
@@ -628,11 +649,7 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
                             )
                           : null,
                       children: [
-                        Text(
-                          (data['no']?.toString().isNotEmpty ?? false)
-                              ? data['no'].toString()
-                              : '${index + 1}',
-                        ),
+                        Text('${index + 1}'),
                         Text(data['rumah']?.toString() ?? '-'),
                         Text(data['pemilik']?.toString() ?? '-'),
                         Text(data['noHpPemilik']?.toString() ?? '-'),

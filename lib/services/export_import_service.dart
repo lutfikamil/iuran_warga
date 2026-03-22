@@ -343,7 +343,7 @@ class ExportImportService {
 
         if (!_requiredImportHeaders.every(columnIndex.containsKey)) {
           throw Exception(
-            'Header import wajib: ${wargaImportHeaders.join(', ')}',
+            'Header import wajib: ${_requiredImportHeaders.join(', ')}',
           );
         }
 
@@ -354,7 +354,6 @@ class ExportImportService {
 
           try {
             final rumahRaw = _getImportValue(row, columnIndex, 'rumah');
-            final no = _getImportValue(row, columnIndex, 'no');
             final nama = _getImportValue(row, columnIndex, 'nama');
             final hp = _getImportValue(row, columnIndex, 'hp');
             final status = _getImportValue(row, columnIndex, 'status');
@@ -434,7 +433,6 @@ class ExportImportService {
             /// 🔥 simpan untuk create login
             usersToCreate.add({
               'wargaId': ref.id,
-              'no': no,
               'nama': nama,
               'rumah': rumah,
               'noHpPenghuni': hp,
@@ -530,7 +528,6 @@ Pengurus Perumahan Mulia Land Patria.
                 (user['noHpPenghuniSekertaris'] ?? user['noHpPenghuni'] ?? '')
                     .toString(),
             status: (user['status'] ?? 'Dihuni').toString(),
-            no: (user['no'] ?? '').toString(),
             pemilik: (user['pemilik'] ?? '').toString(),
             noHpPemilik: (user['noHpPemilik'] ?? '').toString(),
             dihuniOleh: (user['dihuniOleh'] ?? '').toString(),
@@ -590,20 +587,10 @@ Pengurus Perumahan Mulia Land Patria.
   }
 
   static const List<String> _requiredImportHeaders = [
-    'no',
     'rumah',
     'nama',
-    'hp',
     'status',
     'role',
-    'pemilik',
-    'nohppemilik',
-    'dihunioleh',
-    'nohppenghuni',
-    'noktp',
-    'nokk',
-    'keterangan',
-    'tanggal bergabung',
   ];
 
   static Map<String, int> _buildImportColumnIndex(List<Data?> row) {

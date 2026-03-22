@@ -14,7 +14,6 @@ class SekertarisSyncService {
     String? nama,
     String? noHpPenghuni,
     String? status,
-    String? no,
     String? pemilik,
     String? noHpPemilik,
     String? dihuniOleh,
@@ -38,7 +37,6 @@ class SekertarisSyncService {
     final resolvedPemilik = (pemilik ?? normalizedNama).trim();
     final resolvedNoHpPemilik = (noHpPemilik ?? normalizedHpPenghuni).trim();
     final resolvedDihuniOleh = (dihuniOleh ?? normalizedNama).trim();
-    final resolvedNo = (no ?? existingData?['no'] ?? '').toString().trim();
     final resolvedNoKtp = (noKtp ?? existingData?['noKtp'] ?? '')
         .toString()
         .trim();
@@ -50,7 +48,6 @@ class SekertarisSyncService {
         .trim();
 
     final data = <String, dynamic>{
-      'no': resolvedNo,
       'rumah': normalizedRumah,
       'pemilik': resolvedPemilik,
       'noHpPemilik': resolvedNoHpPemilik,
@@ -64,7 +61,10 @@ class SekertarisSyncService {
     };
 
     if (existing.docs.isNotEmpty) {
-      await existing.docs.first.reference.set(data, SetOptions(merge: true));
+      await existing.docs.first.reference.set({
+        ...data,
+        'no': FieldValue.delete(),
+      }, SetOptions(merge: true));
       return;
     }
 
