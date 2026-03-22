@@ -14,7 +14,7 @@ class DashboardPage extends StatelessWidget {
       _role == 'admin' ||
       _role == 'ketua' ||
       _role == 'bendahara' ||
-      _role == 'pengurus_musolah';
+      _role == 'pengurusMusolah';
 
   /// =========================
   /// MENU LIST

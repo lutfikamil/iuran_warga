@@ -39,7 +39,7 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
   bool get _canInputTransaksi {
     final role = (SessionService.getRole() ?? '').toLowerCase();
     return role ==
-        'petugas_musolah'
+        'pengurusMusolah'
             'admin';
   }
 
@@ -77,17 +77,16 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
         saldo -= jumlah;
       }
 
-          return {
-            'id': doc.id,
-            'tanggal': data['tanggal'] as Timestamp?,
-            'jenis': jenis,
-            'jumlah': jumlah,
-            'petugas': (data['petugas'] ?? '-').toString(),
-            'keterangan': (data['keterangan'] ?? '-').toString(),
-            'saldo': saldo,
-          };
-        })
-        .toList();
+      return {
+        'id': doc.id,
+        'tanggal': data['tanggal'] as Timestamp?,
+        'jenis': jenis,
+        'jumlah': jumlah,
+        'petugas': (data['petugas'] ?? '-').toString(),
+        'keterangan': (data['keterangan'] ?? '-').toString(),
+        'saldo': saldo,
+      };
+    }).toList();
   }
 
   List<Map<String, dynamic>> _filterRows(List<Map<String, dynamic>> rows) {
