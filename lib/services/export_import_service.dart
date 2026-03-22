@@ -368,7 +368,8 @@ class ExportImportService {
               columnIndex,
               'nohppemilik',
             );
-            final dihuniOleh = _getImportValue(row, columnIndex, 'dihunioleh');
+            final dihuniOlehImport = _getImportValue(row, columnIndex, 'dihunioleh');
+            final dihuniOleh = dihuniOlehImport.isNotEmpty ? dihuniOlehImport : nama;
             final noHpSekretaris = _getImportValue(
               row,
               columnIndex,

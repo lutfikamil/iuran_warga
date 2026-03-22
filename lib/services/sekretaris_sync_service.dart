@@ -35,9 +35,14 @@ class SekretarisSyncService {
     final normalizedNama = (nama ?? '').trim();
     final normalizedHpPenghuni = (noHpPenghuni ?? '').trim();
     final normalizedStatus = (status ?? '').trim();
-    final resolvedPemilik = (pemilik ?? normalizedNama).trim();
-    final resolvedNoHpPemilik = (noHpPemilik ?? normalizedHpPenghuni).trim();
-    final resolvedDihuniOleh = (dihuniOleh ?? normalizedNama).trim();
+    final resolvedPemilik =
+        (pemilik ?? existingData?['pemilik'] ?? '').toString().trim();
+    final resolvedNoHpPemilik =
+        (noHpPemilik ?? existingData?['noHpPemilik'] ?? '').toString().trim();
+    final resolvedDihuniOleh =
+        (dihuniOleh?.trim().isNotEmpty ?? false)
+        ? dihuniOleh!.trim()
+        : normalizedNama;
     final resolvedNoKtp = (noKtp ?? existingData?['noKtp'] ?? '')
         .toString()
         .trim();
