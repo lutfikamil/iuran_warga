@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../../services/auth_service.dart';
 import '../../services/session_service.dart';
 
 class KeuanganMusolahPage extends StatefulWidget {
@@ -37,10 +38,8 @@ class _KeuanganMusolahPageState extends State<KeuanganMusolahPage> {
   bool _isExporting = false;
 
   bool get _canInputTransaksi {
-    final role = (SessionService.getRole() ?? '').toLowerCase();
-    return role ==
-        'pengurusMusolah'
-            'admin';
+    final role = AuthService.normalizeRole(SessionService.getRole());
+    return role == 'admin' || role == 'pengurus_musolah';
   }
 
   String _formatRupiah(num number) {

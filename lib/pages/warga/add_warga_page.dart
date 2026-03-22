@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../../services/auth_service.dart';
 import '../../services/iuran_service.dart';
 import '../../services/log_service.dart';
 import '../../services/sekertaris_sync_service.dart';
@@ -33,7 +34,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
     'bendahara',
     'sekertaris',
     'petugas',
-    'pengurusMusolah',
+    'pengurus_musolah',
     'warga',
   ];
 
@@ -71,7 +72,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
         _rumahController.text = data['rumah'] ?? '';
         _hpController.text = data['noHpPenghuni'] ?? '';
         _selectedStatus = data['status'] ?? _statusOptions.first;
-        _selectedRole = (data['role'] ?? 'warga').toString().toLowerCase();
+        _selectedRole = AuthService.normalizeRole(data['role']?.toString() ?? 'warga');
         _isIuranAktifUntukRumahKosong =
             data['status']?.toString().toLowerCase() == 'kosong' &&
             data['iuranAktif'] == true;

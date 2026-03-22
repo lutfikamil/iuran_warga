@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../services/log_service.dart';
+import '../../services/auth_service.dart';
 import '../../services/session_service.dart';
 
 class SekertarisDataPage extends StatefulWidget {
@@ -36,7 +37,7 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
   ];
 
   bool get _canEdit {
-    final role = (SessionService.getRole() ?? '').toLowerCase();
+    final role = AuthService.normalizeRole(SessionService.getRole());
     return role == 'admin' || role == 'ketua' || role == 'sekertaris';
   }
 

@@ -34,7 +34,7 @@ class _WargaPageState extends State<WargaPage> {
   }
 
   Future<void> _loadUserRole() async {
-    final role = SessionService.getRole();
+    final role = AuthService.normalizeRole(SessionService.getRole());
     setState(() {
       _isWarga = role == 'warga';
     });

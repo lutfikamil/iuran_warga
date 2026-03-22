@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
 import '../../services/session_service.dart';
 import '../warga/detail_warga_page.dart';
 import 'logs_page.dart';
@@ -24,14 +25,14 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadSessionInfo() async {
-    final role =  SessionService.getRole();
+    final role = AuthService.normalizeRole(SessionService.getRole());
     final identifier =  SessionService.getIdentifier();
     final isAdmin =  SessionService.isAdminLogin();
 
     if (!mounted) return;
 
     setState(() {
-      _role = role ?? '-';
+      _role = role.isEmpty ? '-' : role;
       _identifier = identifier ?? '-';
       _isAdmin = isAdmin;
       _loading = false;
