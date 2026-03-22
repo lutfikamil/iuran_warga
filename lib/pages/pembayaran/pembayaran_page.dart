@@ -375,6 +375,27 @@ class _PembayaranPageState extends State<PembayaranPage> {
           ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(12),
+// awal edit   child: Column(
+          children: [
+            // 🔍 SEARCH BAR DI BODY
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Cari nama atau rumah...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
+              ),
+              onChanged: (value) {
+                setState(() {}); // biar langsung filter
+              },
+            ),
+
+            const SizedBox(height: 12),
+// akhir edit
               child: docs.isEmpty && !_isLoading
                   ? Center(
                       child: Text(
