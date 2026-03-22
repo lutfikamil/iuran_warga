@@ -3,16 +3,20 @@ import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
 import '../../services/session_service.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class LoginDevPage extends StatefulWidget {
+  const LoginDevPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<LoginDevPage> createState() => _LoginDevPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
-  final TextEditingController identifierController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+class _LoginDevPageState extends State<LoginDevPage> {
+  final TextEditingController identifierController = TextEditingController(
+    text: ("admin@perum.com"),
+  );
+  final TextEditingController passwordController = TextEditingController(
+    text: ("123456"),
+  );
 
   bool loading = false;
 

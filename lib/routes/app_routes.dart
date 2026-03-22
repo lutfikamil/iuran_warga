@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../pages/laporan/laporan_page.dart';
 import '../pages/login/login_page.dart';
@@ -16,11 +17,13 @@ import '../pages/sekertaris/sekertaris_data_page.dart';
 import '../pages/keuangan_musolah/keuangan_musolah_page.dart';
 import '../services/auth_service.dart';
 import '../services/session_service.dart';
+import '../pages/login/login_dev_page.dart';
 
 final AuthService authService = AuthService();
 
 class AppRoutes {
   static const login = "/";
+  static const loginDev = "/";
   static const dashboard = "/dashboard";
   static const warga = "/warga";
   static const pembayaran = "/pembayaran";
@@ -62,7 +65,7 @@ class AppRoutes {
   }
 
   static Map<String, WidgetBuilder> routes = {
-    login: (_) => const LoginPage(),
+    login: (_) => kDebugMode ? const LoginDevPage() : const LoginPage(),
     dashboard: (_) => _buildGuardedRoute(
       page: const DashboardPage(),
       allowedRoles: [
@@ -75,6 +78,7 @@ class AppRoutes {
         UserRole.warga,
       ],
     ),
+
     warga: (_) => _buildGuardedRoute(
       page: const WargaPage(),
       allowedRoles: [

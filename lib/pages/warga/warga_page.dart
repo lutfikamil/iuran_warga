@@ -25,6 +25,7 @@ class _WargaPageState extends State<WargaPage> {
   List<DocumentSnapshot> _allWargaDocs = [];
   bool _isWarga = false;
   bool _isSendingTagihan = false;
+  bool get _isSmallScreen => MediaQuery.of(context).size.width < 600;
 
   @override
   void initState() {
@@ -117,62 +118,116 @@ class _WargaPageState extends State<WargaPage> {
     );
   }
 
+  Widget _buildDesktopActions() {
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.calendar_month),
+          tooltip: "Generate 1 Tahun",
+          onPressed: () => GeneratePage.generateIuranSetahunDialog(context),
+        ),
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          tooltip: "Generate Iuran",
+          onPressed: () => GeneratePage.generateIuranDialog(context),
+        ),
+        IconButton(
+          icon: const Icon(Icons.file_copy),
+          tooltip: "Export / Import",
+          onPressed: () => _showExportImportMenu(context, _allWargaDocs),
+        ),
+        IconButton(
+          icon: _isSendingTagihan
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.send),
+          tooltip: "Kirim Tagihan",
+          onPressed: _isSendingTagihan ? null : _kirimTagihanBulanIni,
+        ),
+        IconButton(
+          icon: const Icon(Icons.archive_outlined),
+          tooltip: 'Arsip',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const WargaKeluarPage()),
+            );
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.add),
+          tooltip: 'Tambah',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddWargaPage()),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPopupMenu() {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert),
+      onSelected: (value) async {
+        switch (value) {
+          case 'generate_tahun':
+            GeneratePage.generateIuranSetahunDialog(context);
+            break;
+          case 'generate':
+            GeneratePage.generateIuranDialog(context);
+            break;
+          case 'export':
+            _showExportImportMenu(context, _allWargaDocs);
+            break;
+          case 'kirim':
+            if (!_isSendingTagihan) {
+              await _kirimTagihanBulanIni;
+            }
+            break;
+          case 'arsip':
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const WargaKeluarPage()),
+            );
+            break;
+          case 'tambah':
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddWargaPage()),
+            );
+            break;
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'generate_tahun',
+          child: Text('Generate 1 Tahun'),
+        ),
+        const PopupMenuItem(value: 'generate', child: Text('Generate Iuran')),
+        const PopupMenuItem(value: 'export', child: Text('Export / Import')),
+        const PopupMenuItem(value: 'kirim', child: Text('Kirim Tagihan')),
+        const PopupMenuItem(value: 'arsip', child: Text('Arsip Warga Keluar')),
+        const PopupMenuItem(value: 'tambah', child: Text('Tambah Warga')),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Data Warga"),
         actions: [
-          // Hanya admin/petugas yang bisa generate & export import
-          if (!_isWarga) ...[
-            IconButton(
-              icon: const Icon(Icons.calendar_month),
-              tooltip: "Generate 1 Tahun",
-              onPressed: () => GeneratePage.generateIuranSetahunDialog(context),
-            ),
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              tooltip: "Generate Iuran",
-              onPressed: () => GeneratePage.generateIuranDialog(context),
-            ),
-            IconButton(
-              icon: const Icon(Icons.file_copy),
-              tooltip: "Export / Import",
-              onPressed: () => _showExportImportMenu(context, _allWargaDocs),
-            ),
-            IconButton(
-              icon: _isSendingTagihan
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.send),
-              tooltip: "Kirim Tagihan Bulan Ini",
-              onPressed: _isSendingTagihan ? null : _kirimTagihanBulanIni,
-            ),
-            IconButton(
-              icon: const Icon(Icons.archive_outlined),
-              tooltip: 'Arsip Warga Keluar',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const WargaKeluarPage(),
-                  ),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AddWargaPage()),
-                );
-              },
-            ),
-          ],
+          if (!_isWarga)
+            _isSmallScreen
+                ? _buildPopupMenu() // 📱 kecil → dropdown
+                : _buildDesktopActions(), // 💻 besar → icon
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(kToolbarHeight + 8),
@@ -217,7 +272,10 @@ class _WargaPageState extends State<WargaPage> {
           _allWargaDocs = wargaSnapshot.data!.docs;
 
           return StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection("iuran").snapshots(),
+            stream: FirebaseFirestore.instance
+                .collection("iuran")
+                .where("status", isNotEqualTo: "lunas")
+                .snapshots(),
             builder: (context, iuranSnapshot) {
               if (iuranSnapshot.hasError) {
                 return Center(child: Text('Error: ${iuranSnapshot.error}'));

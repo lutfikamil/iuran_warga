@@ -350,13 +350,12 @@ class _PembayaranPageState extends State<PembayaranPage> {
           ),
         ],
       ),
-      body: _wargaMap.isEmpty
+      body: _isLoading && _wargaMap.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 children: [
-                  // 🔍 SEARCH BAR DI BODY
                   TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
