@@ -41,6 +41,10 @@ service cloud.firestore {
     function isWarga() {
       return getUserRole() == "warga";
     }
+    
+    function isPengurusMusolah() {
+    	return getUserRole() == "pengurus_musolah";
+    }
 
     function isOwner(id) {
       return isLoggedIn() && request.auth.uid == id;
@@ -64,6 +68,13 @@ service cloud.firestore {
       allow create, update, delete:
         if getUserRole() in ['admin', 'sekretaris', 'bendahara'];
     }
+    
+    // ===== DATA SEKRETARIS =====
+    match /data_sekretaris/{id} {
+      allow read: if isLoggedIn();
+      allow create, update, delete:
+        if getUserRole() in ['admin', 'sekretaris', 'ketua'];
+    }
 
     // ===== USERS =====
     match /users/{id} {
@@ -79,7 +90,12 @@ service cloud.firestore {
       allow read: if isLoggedIn();
       allow write: if isAdmin();
     }
-
+ // ===== KEUANGAN MUSOLAH =====
+   	match /keuangan_musolah/{id} {
+    	allow read: if isLoggedIn();
+      allow update, create: if isPengurusMusolah();
+    }
+    
     // ===== LOGS =====
     match /logs/{id} {
       allow read: if isAdmin();
