@@ -8,8 +8,8 @@ class DashboardPage extends StatelessWidget {
 
   String get _role => AuthService.normalizeRole(SessionService.getRole());
 
-  bool get _showSekertarisMenu =>
-      _role == 'admin' || _role == 'ketua' || _role == 'sekertaris';
+  bool get _showSekretarisMenu =>
+      _role == 'admin' || _role == 'ketua' || _role == 'sekretaris';
 
   bool get _showMusolahMenu =>
       _role == 'admin' ||
@@ -47,13 +47,13 @@ class DashboardPage extends StatelessWidget {
       _menu("Pengaturan", Icons.settings, AppRoutes.settings),
     ];
 
-    if (_showSekertarisMenu) {
+    if (_showSekretarisMenu) {
       items.insert(
         7,
         _menu(
-          "Data Sekertaris",
+          "Data Sekretaris",
           Icons.assignment,
-          AppRoutes.sekertarisData,
+          AppRoutes.sekretarisData,
           Colors.teal,
         ),
       );

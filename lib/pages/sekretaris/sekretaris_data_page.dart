@@ -12,14 +12,14 @@ import '../../services/log_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/session_service.dart';
 
-class SekertarisDataPage extends StatefulWidget {
-  const SekertarisDataPage({super.key});
+class SekretarisDataPage extends StatefulWidget {
+  const SekretarisDataPage({super.key});
 
   @override
-  State<SekertarisDataPage> createState() => _SekertarisDataPageState();
+  State<SekretarisDataPage> createState() => _SekretarisDataPageState();
 }
 
-class _SekertarisDataPageState extends State<SekertarisDataPage> {
+class _SekretarisDataPageState extends State<SekretarisDataPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -38,7 +38,7 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
 
   bool get _canEdit {
     final role = AuthService.normalizeRole(SessionService.getRole());
-    return role == 'admin' || role == 'ketua' || role == 'sekertaris';
+    return role == 'admin' || role == 'ketua' || role == 'sekretaris';
   }
 
   @override
@@ -90,7 +90,7 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
                 try {
                   if (isEditing) {
                     await _firestore
-                        .collection('data_sekertaris')
+                        .collection('data_sekretaris')
                         .doc(docId)
                         .set({
                           ...data,
@@ -98,14 +98,14 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
                         }, SetOptions(merge: true));
                   } else {
                     data['createdAt'] = FieldValue.serverTimestamp();
-                    await _firestore.collection('data_sekertaris').add(data);
+                    await _firestore.collection('data_sekretaris').add(data);
                   }
 
                   await LogService().logEvent(
                     action: isEditing
-                        ? 'update_data_sekertaris'
-                        : 'tambah_data_sekertaris',
-                    target: 'data_sekertaris',
+                        ? 'update_data_sekretaris'
+                        : 'tambah_data_sekretaris',
+                    target: 'data_sekretaris',
                     detail:
                         '${isEditing ? 'Update' : 'Tambah'} data sekretaris rumah $rumah',
                   );
@@ -123,7 +123,7 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
 
               return AlertDialog(
                 title: Text(
-                  isEditing ? 'Edit Data Sekertaris' : 'Tambah Data Sekertaris',
+                  isEditing ? 'Edit Data Sekretaris' : 'Tambah Data Sekretaris',
                 ),
                 content: SizedBox(
                   width: 700,
@@ -277,7 +277,7 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
     List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
   ) async {
     final excel = Excel.createExcel();
-    final sheet = excel['DataSekertaris'];
+    final sheet = excel['DataSekretaris'];
 
     // header
     sheet.appendRow([
@@ -301,7 +301,7 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
     if (bytes == null) return;
 
     final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/data_sekertaris.xlsx');
+    final file = File('${dir.path}/data_sekretaris.xlsx');
     await file.writeAsBytes(bytes);
 
     await Share.shareXFiles([XFile(file.path)], text: 'Export Data Sekretaris');
@@ -353,15 +353,15 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
   //        'updatedAt': FieldValue.serverTimestamp(),
   //      };
   //
-  //      final docRef = _firestore.collection('data_sekertaris').doc();
+  //      final docRef = _firestore.collection('data_sekretaris').doc();
   //      batch.set(docRef, data);
   //    }
   //
   //    await batch.commit();
   //
   //    await LogService().logEvent(
-  //      action: 'import_data_sekertaris',
-  //      target: 'data_sekertaris',
+  //      action: 'import_data_sekretaris',
+  //      target: 'data_sekretaris',
   //      detail: 'Import ${sheet.rows.length - 1} baris dari Excel',
   //    );
   //    if (mounted) {
@@ -418,7 +418,7 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
 
     final bytes = await pdf.save();
     final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/data_sekertaris.pdf');
+    final file = File('${dir.path}/data_sekretaris.pdf');
     await file.writeAsBytes(bytes);
 
     await Share.shareXFiles([XFile(file.path)], text: 'Export Data Sekretaris');
@@ -471,15 +471,15 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
   //        'updatedAt': FieldValue.serverTimestamp(),
   //      };
   //
-  //      final docRef = _firestore.collection('data_sekertaris').doc();
+  //      final docRef = _firestore.collection('data_sekretaris').doc();
   //      batch.set(docRef, data);
   //    }
   //
   //    await batch.commit();
   //
   //    await LogService().logEvent(
-  //      action: 'import_data_sekertaris',
-  //      target: 'data_sekertaris',
+  //      action: 'import_data_sekretaris',
+  //      target: 'data_sekretaris',
   //      detail: 'Import ${sheet.rows.length - 1} baris dari Excel',
   //    );
   //    if (mounted) {
@@ -493,7 +493,7 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Data Sekertaris'),
+        title: const Text('Data Sekretaris'),
         actions: [
           if (_canEdit) ...[
             //  IconButton(
@@ -505,7 +505,7 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
               tooltip: 'Export Excel',
               onPressed: () {
                 final docs = context
-                    .findAncestorStateOfType<_SekertarisDataPageState>()!
+                    .findAncestorStateOfType<_SekretarisDataPageState>()!
                     ._filteredDocs;
                 _exportExcel(docs);
               },
@@ -515,7 +515,7 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
               tooltip: 'Export PDF',
               onPressed: () {
                 final docs = context
-                    .findAncestorStateOfType<_SekertarisDataPageState>()!
+                    .findAncestorStateOfType<_SekretarisDataPageState>()!
                     ._filteredDocs;
                 _exportPdf(docs);
               },
@@ -555,7 +555,7 @@ class _SekertarisDataPageState extends State<SekertarisDataPage> {
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: _firestore
-            .collection('data_sekertaris')
+            .collection('data_sekretaris')
             .orderBy('rumah')
             .snapshots(),
         builder: (context, snapshot) {

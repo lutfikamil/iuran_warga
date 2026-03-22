@@ -1,13 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class SekertarisSyncService {
-  SekertarisSyncService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+class SekretarisSyncService {
+  SekretarisSyncService({FirebaseFirestore? firestore})
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _firestore;
 
-  CollectionReference<Map<String, dynamic>> get _sekertarisRef =>
-      _firestore.collection('data_sekertaris');
+  CollectionReference<Map<String, dynamic>> get _sekretarisRef =>
+      _firestore.collection('data_sekretaris');
 
   Future<void> syncWarga({
     required String rumah,
@@ -24,13 +24,14 @@ class SekertarisSyncService {
     final normalizedRumah = rumah.trim().toUpperCase();
     if (normalizedRumah.isEmpty) return;
 
-    final existing = await _sekertarisRef
+    final existing = await _sekretarisRef
         .where('rumah', isEqualTo: normalizedRumah)
         .limit(1)
         .get();
 
-    final existingData =
-        existing.docs.isNotEmpty ? existing.docs.first.data() : null;
+    final existingData = existing.docs.isNotEmpty
+        ? existing.docs.first.data()
+        : null;
     final normalizedNama = (nama ?? '').trim();
     final normalizedHpPenghuni = (noHpPenghuni ?? '').trim();
     final normalizedStatus = (status ?? '').trim();
@@ -68,7 +69,7 @@ class SekertarisSyncService {
       return;
     }
 
-    await _sekertarisRef.add({
+    await _sekretarisRef.add({
       ...data,
       'createdAt': FieldValue.serverTimestamp(),
     });
@@ -78,7 +79,7 @@ class SekertarisSyncService {
     final normalizedRumah = rumah.trim().toUpperCase();
     if (normalizedRumah.isEmpty) return;
 
-    final existing = await _sekertarisRef
+    final existing = await _sekretarisRef
         .where('rumah', isEqualTo: normalizedRumah)
         .limit(1)
         .get();

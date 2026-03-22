@@ -145,7 +145,7 @@ class DetailWargaPage extends StatelessWidget {
       'admin',
       'ketua',
       'bendahara',
-      'sekertaris',
+      'sekretaris',
       'petugas',
     ].contains(role);
 

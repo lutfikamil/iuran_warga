@@ -11,7 +11,7 @@ enum UserRole {
   admin,
   ketua,
   bendahara,
-  sekertaris,
+  sekretaris,
   petugas,
   pengurusMusolah,
   warga,
@@ -80,8 +80,8 @@ class AuthService {
         return 'ketua';
       case 'bendahara':
         return 'bendahara';
-      case 'sekertaris':
-        return 'sekertaris';
+      case 'sekretaris':
+        return 'sekretaris';
       case 'petugas':
         return 'petugas';
       case 'pengurusmusolah':
@@ -101,8 +101,8 @@ class AuthService {
         return UserRole.ketua;
       case 'bendahara':
         return UserRole.bendahara;
-      case 'sekertaris':
-        return UserRole.sekertaris;
+      case 'sekretaris':
+        return UserRole.sekretaris;
       case 'petugas':
         return UserRole.petugas;
       case 'pengurus_musolah':
@@ -200,7 +200,9 @@ class AuthService {
     return '••••$visibleEnd';
   }
 
-  Future<PasswordResetResult> resetPasswordForResident(String identifier) async {
+  Future<PasswordResetResult> resetPasswordForResident(
+    String identifier,
+  ) async {
     final normalizedIdentifier = identifier.trim();
     if (normalizedIdentifier.isEmpty) {
       throw Exception('Identifier wajib diisi.');
@@ -236,7 +238,8 @@ class AuthService {
     try {
       await WhatsappService.sendMessage(
         phone: phone,
-        message: '''Halo Bapak/Ibu $nama
+        message:
+            '''Halo Bapak/Ibu $nama
 
 Kami menerima permintaan reset password untuk akun rumah $rumah.
 

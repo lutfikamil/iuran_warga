@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/iuran_service.dart';
 import '../../services/log_service.dart';
-import '../../services/sekertaris_sync_service.dart';
+import '../../services/sekretaris_sync_service.dart';
 import '../../services/whatsapp_service.dart';
 import '../../services/users_service.dart';
 import '../../services/warga_lifecycle_service.dart';
@@ -32,7 +32,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
   final List<String> _roleOptions = [
     'ketua',
     'bendahara',
-    'sekertaris',
+    'sekretaris',
     'petugas',
     'pengurus_musolah',
     'warga',
@@ -72,7 +72,9 @@ class _AddWargaPageState extends State<AddWargaPage> {
         _rumahController.text = data['rumah'] ?? '';
         _hpController.text = data['noHpPenghuni'] ?? '';
         _selectedStatus = data['status'] ?? _statusOptions.first;
-        _selectedRole = AuthService.normalizeRole(data['role']?.toString() ?? 'warga');
+        _selectedRole = AuthService.normalizeRole(
+          data['role']?.toString() ?? 'warga',
+        );
         _isIuranAktifUntukRumahKosong =
             data['status']?.toString().toLowerCase() == 'kosong' &&
             data['iuranAktif'] == true;
@@ -147,7 +149,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
           newRawPassword: password,
         );
 
-        await SekertarisSyncService().syncWarga(
+        await SekretarisSyncService().syncWarga(
           rumah: rumah,
           nama: nama,
           noHpPenghuni: hp,
@@ -187,7 +189,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
           newRawPassword: password,
         );
 
-        await SekertarisSyncService().syncWarga(
+        await SekretarisSyncService().syncWarga(
           rumah: rumah,
           nama: nama,
           noHpPenghuni: hp,

@@ -14,7 +14,7 @@ import 'package:intl/intl.dart';
 import 'users_service.dart';
 import 'whatsapp_service.dart';
 import 'warga_lifecycle_service.dart';
-import 'sekertaris_sync_service.dart';
+import 'sekretaris_sync_service.dart';
 
 class ExportImportService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -369,7 +369,7 @@ class ExportImportService {
               'nohppemilik',
             );
             final dihuniOleh = _getImportValue(row, columnIndex, 'dihunioleh');
-            final noHpSekertaris = _getImportValue(
+            final noHpSekretaris = _getImportValue(
               row,
               columnIndex,
               'nohppenghuni',
@@ -441,7 +441,7 @@ class ExportImportService {
               'pemilik': pemilik,
               'noHpPemilik': noHpPemilik,
               'dihuniOleh': dihuniOleh,
-              'noHpPenghuniSekertaris': noHpSekertaris,
+              'noHpPenghuniSekretaris': noHpSekretaris,
               'noKtp': noKtp,
               'noKk': noKk,
               'keterangan': keterangan,
@@ -521,11 +521,11 @@ Pengurus Perumahan Mulia Land Patria.
 
       for (final user in usersToCreate) {
         try {
-          await SekertarisSyncService().syncWarga(
+          await SekretarisSyncService().syncWarga(
             rumah: (user['rumah'] ?? '').toString(),
             nama: (user['nama'] ?? '').toString(),
             noHpPenghuni:
-                (user['noHpPenghuniSekertaris'] ?? user['noHpPenghuni'] ?? '')
+                (user['noHpPenghuniSekretaris'] ?? user['noHpPenghuni'] ?? '')
                     .toString(),
             status: (user['status'] ?? 'Dihuni').toString(),
             pemilik: (user['pemilik'] ?? '').toString(),
@@ -622,8 +622,8 @@ Pengurus Perumahan Mulia Land Patria.
   static String _normalizeImportHeader(String value) {
     final normalized = value.trim().toLowerCase().replaceAll(' ', '');
     switch (normalized) {
-      case 'statussekertaris':
       case 'statussekretaris':
+      case 'status sekretaris':
         return 'status';
       case 'phone':
       case 'nohp':

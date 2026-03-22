@@ -23,7 +23,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return getUserRole() in ['admin', 'sekertaris'];
+      return getUserRole() in ['admin', 'sekretaris'];
     }
 
     function isKetua() {
@@ -62,7 +62,7 @@ service cloud.firestore {
     match /transaksi/{id} {
       allow read: if isLoggedIn();
       allow create, update, delete:
-        if getUserRole() in ['admin', 'sekertaris', 'bendahara'];
+        if getUserRole() in ['admin', 'sekretaris', 'bendahara'];
     }
 
     // ===== USERS =====

@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'iuran_service.dart';
 import 'log_service.dart';
-import 'sekertaris_sync_service.dart';
+import 'sekretaris_sync_service.dart';
 import 'users_service.dart';
 
 class WargaLifecycleService {
@@ -75,8 +75,8 @@ class WargaLifecycleService {
       ),
     );
 
-    await SekertarisSyncService().markRumahKosong(rumahLama);
-    await SekertarisSyncService().syncWarga(
+    await SekretarisSyncService().markRumahKosong(rumahLama);
+    await SekretarisSyncService().syncWarga(
       rumah: normalizedRumahBaru,
       nama: (warga['nama'] ?? '').toString(),
       noHpPenghuni: (warga['noHpPenghuni'] ?? '').toString(),
@@ -135,7 +135,7 @@ class WargaLifecycleService {
 
     await batch.commit();
 
-    await SekertarisSyncService().markRumahKosong(
+    await SekretarisSyncService().markRumahKosong(
       (warga['rumah'] ?? '').toString(),
     );
 
@@ -199,7 +199,7 @@ class WargaLifecycleService {
       newRawPassword: '123456',
     );
 
-    await SekertarisSyncService().syncWarga(
+    await SekretarisSyncService().syncWarga(
       rumah: normalizedRumah,
       nama: namaBaru.trim(),
       noHpPenghuni: hpBaru.trim(),
