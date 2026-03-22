@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:iuran_perumahan/services/auth_service.dart';
 import 'package:iuran_perumahan/services/session_service.dart';
 import 'package:logger/logger.dart';
 import 'settings_service.dart';
@@ -246,7 +247,7 @@ class IuranService {
         final String namaWarga = wargaData?['nama'] ?? 'Warga Tidak Diketahui';
         final String rumahWarga = wargaData?['rumah'] ?? '-';
         final String dariKeterangan = '$namaWarga (Rumah $rumahWarga)';
-        final role = SessionService.getRole();
+        final role = AuthService.normalizeRole(SessionService.getRole());
         //final namaUser = user?["user"] ?? "Unknown";
         final transaksiRef = _firestore.collection("transaksi").doc();
         transaction.set(transaksiRef, {

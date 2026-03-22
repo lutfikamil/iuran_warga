@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'auth_service.dart';
 import 'session_service.dart';
 
 class LogService {
@@ -12,13 +13,13 @@ class LogService {
     required String target,
     required String detail,
   }) async {
-    final role =  SessionService.getRole();
+    final role = AuthService.normalizeRole(SessionService.getRole());
 
     await _firestore.collection('logs').add({
       'action': action,
       'target': target,
       'detail': detail,
-      'actorRole': role ?? 'unknown',
+      'actorRole': role.isEmpty ? 'unknown' : role,
       'timestamp': FieldValue.serverTimestamp(),
       'createdAt': FieldValue.serverTimestamp(),
     });

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../routes/app_routes.dart';
+import '../../services/auth_service.dart';
 import '../../services/session_service.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
-  String get _role => (SessionService.getRole() ?? '').toLowerCase();
+  String get _role => AuthService.normalizeRole(SessionService.getRole());
 
   bool get _showSekertarisMenu =>
       _role == 'admin' || _role == 'ketua' || _role == 'sekertaris';
@@ -14,7 +15,7 @@ class DashboardPage extends StatelessWidget {
       _role == 'admin' ||
       _role == 'ketua' ||
       _role == 'bendahara' ||
-      _role == 'pengurusMusolah';
+      _role == 'pengurus_musolah';
 
   /// =========================
   /// MENU LIST

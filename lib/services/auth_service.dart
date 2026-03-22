@@ -62,16 +62,56 @@ class AuthService {
     _currentUserRole = role;
   }
 
-  UserRole roleFromString(String? role) {
+  static String normalizeRole(String? role) {
     final normalizedRole = (role ?? '').trim().toLowerCase();
     if (normalizedRole.isEmpty) {
-      return UserRole.unauthenticated;
+      return '';
     }
 
-    return UserRole.values.firstWhere(
-      (value) => value.name.toLowerCase() == normalizedRole.replaceAll('_', ''),
-      orElse: () => UserRole.unauthenticated,
-    );
+    final compactRole = normalizedRole
+        .replaceAll('-', '_')
+        .replaceAll(' ', '_')
+        .replaceAll('_', '');
+
+    switch (compactRole) {
+      case 'admin':
+        return 'admin';
+      case 'ketua':
+        return 'ketua';
+      case 'bendahara':
+        return 'bendahara';
+      case 'sekertaris':
+        return 'sekertaris';
+      case 'petugas':
+        return 'petugas';
+      case 'pengurusmusolah':
+        return 'pengurus_musolah';
+      case 'warga':
+        return 'warga';
+      default:
+        return normalizedRole.replaceAll('-', '_').replaceAll(' ', '_');
+    }
+  }
+
+  UserRole roleFromString(String? role) {
+    switch (normalizeRole(role)) {
+      case 'admin':
+        return UserRole.admin;
+      case 'ketua':
+        return UserRole.ketua;
+      case 'bendahara':
+        return UserRole.bendahara;
+      case 'sekertaris':
+        return UserRole.sekertaris;
+      case 'petugas':
+        return UserRole.petugas;
+      case 'pengurus_musolah':
+        return UserRole.pengurusMusolah;
+      case 'warga':
+        return UserRole.warga;
+      default:
+        return UserRole.unauthenticated;
+    }
   }
 
   void restoreRoleFromSession(String? role) {
@@ -120,7 +160,7 @@ class AuthService {
       throw Exception('Akun sudah tidak aktif');
     }
 
-    final roleString = (data['role'] ?? 'warga').toString().toLowerCase();
+    final roleString = normalizeRole((data['role'] ?? 'warga').toString());
     final role = roleFromString(roleString);
 
     setCurrentUserRole(role);
