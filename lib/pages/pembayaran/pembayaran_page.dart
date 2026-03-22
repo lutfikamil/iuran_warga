@@ -348,150 +348,141 @@ class _PembayaranPageState extends State<PembayaranPage> {
               },
             ),
           ),
-          SizedBox(
-            width: 200,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Cari nama atau rumah...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
       body: _wargaMap.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(12),
-// awal edit   child: Column(
-          children: [
-            // 🔍 SEARCH BAR DI BODY
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Cari nama atau rumah...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: Colors.grey[100],
-              ),
-              onChanged: (value) {
-                setState(() {}); // biar langsung filter
-              },
-            ),
-
-            const SizedBox(height: 12),
-// akhir edit
-              child: docs.isEmpty && !_isLoading
-                  ? Center(
-                      child: Text(
-                        'Tidak ada data iuran untuk $_selectedBulan $_selectedTahun.',
+              child: Column(
+                children: [
+                  // 🔍 SEARCH BAR DI BODY
+                  TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Cari nama atau rumah...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    )
-                  : Scrollbar(
-                      controller: _horizontalScrollController,
-                      thumbVisibility: true,
-                      child: SingleChildScrollView(
-                        controller: _horizontalScrollController,
-                        scrollDirection: Axis.horizontal,
-                        child: Scrollbar(
-                          controller: _verticalScrollController,
-                          thumbVisibility: true,
-                          child: SingleChildScrollView(
-                            controller: _verticalScrollController,
-                            child: Table(
-                              border: TableBorder.all(
-                                color: Colors.grey.shade300,
-                              ),
-                              columnWidths: const {
-                                0: FixedColumnWidth(_tableCellWidthNo),
-                                1: FixedColumnWidth(_tableCellWidthRumah),
-                                2: FixedColumnWidth(_tableCellWidthNama),
-                                3: FixedColumnWidth(_tableCellWidthBulan),
-                                4: FixedColumnWidth(_tableCellWidthJumlah),
-                                5: FixedColumnWidth(_tableCellWidthStatus),
-                                6: FixedColumnWidth(_tableCellWidthAksi),
-                              },
-                              children: [
-                                _buildHeaderRow(),
-                                ...docs.asMap().entries.map((entry) {
-                                  final i = entry.key;
-                                  final doc = entry.value;
-                                  final iuranData =
-                                      doc.data() as Map<String, dynamic>;
-                                  final wargaData =
-                                      _wargaMap[iuranData['wargaId']];
-                                  return wargaData == null
-                                      ? TableRow(
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // 📊 TABLE
+                  Expanded(
+                    child: docs.isEmpty && !_isLoading
+                        ? Center(
+                            child: Text(
+                              'Tidak ada data iuran untuk $_selectedBulan $_selectedTahun.',
+                            ),
+                          )
+                        : Scrollbar(
+                            controller: _horizontalScrollController,
+                            thumbVisibility: true,
+                            child: SingleChildScrollView(
+                              controller: _horizontalScrollController,
+                              scrollDirection: Axis.horizontal,
+                              child: Scrollbar(
+                                controller: _verticalScrollController,
+                                thumbVisibility: true,
+                                child: SingleChildScrollView(
+                                  controller: _verticalScrollController,
+                                  child: Table(
+                                    border: TableBorder.all(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                    columnWidths: const {
+                                      0: FixedColumnWidth(_tableCellWidthNo),
+                                      1: FixedColumnWidth(_tableCellWidthRumah),
+                                      2: FixedColumnWidth(_tableCellWidthNama),
+                                      3: FixedColumnWidth(_tableCellWidthBulan),
+                                      4: FixedColumnWidth(
+                                        _tableCellWidthJumlah,
+                                      ),
+                                      5: FixedColumnWidth(
+                                        _tableCellWidthStatus,
+                                      ),
+                                      6: FixedColumnWidth(_tableCellWidthAksi),
+                                    },
+                                    children: [
+                                      _buildHeaderRow(),
+                                      ...docs.asMap().entries.map((entry) {
+                                        final i = entry.key;
+                                        final doc = entry.value;
+                                        final iuranData =
+                                            doc.data() as Map<String, dynamic>;
+                                        final wargaData =
+                                            _wargaMap[iuranData['wargaId']];
+
+                                        return wargaData == null
+                                            ? TableRow(
+                                                children: [
+                                                  Padding(
+                                                    padding: _defaultPadding,
+                                                    child: Text(
+                                                      (i + 1).toString(),
+                                                    ),
+                                                  ),
+                                                  const Padding(
+                                                    padding: _defaultPadding,
+                                                    child: Text(
+                                                      'Data Warga Tidak Ditemukan',
+                                                      style: TextStyle(
+                                                        fontStyle:
+                                                            FontStyle.italic,
+                                                        color: Colors.red,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  ...List.filled(
+                                                    5,
+                                                    const Padding(
+                                                      padding: _defaultPadding,
+                                                      child: Text(''),
+                                                    ),
+                                                  ),
+                                                ],
+                                              )
+                                            : _buildDataRow(
+                                                i,
+                                                iuranData,
+                                                wargaData,
+                                                doc.id,
+                                              );
+                                      }),
+
+                                      if (_hasMore)
+                                        TableRow(
                                           children: [
-                                            Padding(
-                                              padding: _defaultPadding,
-                                              child: Text((i + 1).toString()),
-                                            ),
                                             const Padding(
-                                              padding: _defaultPadding,
-                                              child: Text(
-                                                'Data Warga Tidak Ditemukan',
-                                                style: TextStyle(
-                                                  fontStyle: FontStyle.italic,
-                                                  color: Colors.red,
-                                                ),
+                                              padding: EdgeInsets.all(16),
+                                              child: Center(
+                                                child:
+                                                    CircularProgressIndicator(),
                                               ),
                                             ),
                                             ...List.filled(
-                                              5,
+                                              6,
                                               const Padding(
                                                 padding: _defaultPadding,
                                                 child: Text(''),
                                               ),
                                             ),
                                           ],
-                                        )
-                                      : _buildDataRow(
-                                          i,
-                                          iuranData,
-                                          wargaData,
-                                          doc.id,
-                                        );
-                                }),
-                                if (_hasMore)
-                                  TableRow(
-                                    children: [
-                                      const Padding(
-                                        padding: EdgeInsets.all(16),
-                                        child: Center(
-                                          child: CircularProgressIndicator(),
                                         ),
-                                      ),
-                                      ...List.filled(
-                                        6,
-                                        const Padding(
-                                          padding: _defaultPadding,
-                                          child: Text(''),
-                                        ),
-                                      ),
                                     ],
                                   ),
-                              ],
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    ),
+                  ),
+                ],
+              ),
             ),
     );
   }
