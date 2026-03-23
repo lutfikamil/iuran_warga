@@ -84,6 +84,7 @@ class AppRoutes {
       allowedRoles: [
         UserRole.admin,
         UserRole.ketua,
+        UserRole.bendahara,
         UserRole.sekretaris,
         UserRole.petugas,
       ],
