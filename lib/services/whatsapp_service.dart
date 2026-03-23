@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 
 import 'settings_service.dart';
@@ -20,12 +22,13 @@ class WhatsappService {
 
       final url = Uri.parse(settings.apiServer);
       final body = <String, String>{
-        'target': _formatPhone(phone),
+        'target': _normalizePhone(phone),
         'message': message,
+        'countryCode': '62',
       };
 
       if (settings.senderPhone.isNotEmpty) {
-        body['phone'] = _formatPhone(settings.senderPhone);
+        body['phone'] = _normalizePhone(settings.senderPhone);
       }
 
       final response = await http.post(
@@ -35,24 +38,38 @@ class WhatsappService {
       );
 
       if (response.statusCode != 200) {
-        throw Exception('Gagal kirim WA: ${response.body}');
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+
+      final responseBody = response.body.trim();
+      if (responseBody.isEmpty) return;
+
+      final decoded = jsonDecode(responseBody);
+      if (decoded is Map<String, dynamic> && decoded['status'] == false) {
+        final reason = (decoded['reason'] ?? decoded['detail'] ?? responseBody)
+            .toString();
+        throw Exception(reason);
       }
     } catch (e) {
       throw Exception('Error WA: $e');
     }
   }
 
-  static String _formatPhone(String phone) {
-    String p = phone.trim();
+  static String _normalizePhone(String phone) {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
 
-    if (p.startsWith('0')) {
-      p = '+62${p.substring(1)}';
+    if (digits.isEmpty) {
+      throw Exception('Nomor WhatsApp kosong atau tidak valid.');
     }
 
-    if (!p.startsWith('+62')) {
-      p = '+62$p';
+    if (digits.startsWith('0')) {
+      return digits;
     }
 
-    return p;
+    if (digits.startsWith('62')) {
+      return '0${digits.substring(2)}';
+    }
+
+    return '0$digits';
   }
 }
