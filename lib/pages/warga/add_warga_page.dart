@@ -208,14 +208,12 @@ class _AddWargaPageState extends State<AddWargaPage> {
       /// =========================================
       /// 🔥 AUTO KIRIM WHATSAPP
       /// =========================================
-      final credentialEmail =
-          resetResult?.authEmail.isNotEmpty == true
-              ? resetResult!.authEmail
-              : accountResult.authEmail;
-      final credentialPassword =
-          resetResult?.password.isNotEmpty == true
-              ? resetResult!.password
-              : accountResult.rawPassword;
+      final credentialEmail = resetResult?.authEmail.isNotEmpty == true
+          ? resetResult!.authEmail
+          : accountResult.authEmail;
+      final credentialPassword = resetResult?.password.isNotEmpty == true
+          ? resetResult!.password
+          : accountResult.rawPassword;
 
       bool whatsappSent = false;
       String? whatsappError;
@@ -276,7 +274,7 @@ Pengurus Perumahan Mulia Land Patria.
             whatsappError: whatsappError,
           );
         }
-
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -288,6 +286,7 @@ Pengurus Perumahan Mulia Land Patria.
             ),
           ),
         );
+        if (!mounted) return;
         Navigator.pop(context);
       }
     } catch (e) {
@@ -429,10 +428,9 @@ Pengurus Perumahan Mulia Land Patria.
                   setState(() {
                     final previousStatus = _selectedStatus;
                     _selectedStatus = newValue;
-                    final normalizedNewValue =
-                        (newValue ?? '').toLowerCase();
-                    final normalizedPreviousStatus =
-                        (previousStatus ?? '').toLowerCase();
+                    final normalizedNewValue = (newValue ?? '').toLowerCase();
+                    final normalizedPreviousStatus = (previousStatus ?? '')
+                        .toLowerCase();
 
                     if (normalizedNewValue == 'kosong' &&
                         normalizedPreviousStatus != 'kosong') {

@@ -111,8 +111,9 @@ class _SekretarisDataPageState extends State<SekretarisDataPage> {
                       '${isEditing ? 'Update' : 'Tambah'} data sekretaris rumah $rumah',
                 );
 
-                if (dialogContext.mounted)
+                if (dialogContext.mounted) {
                   Navigator.of(dialogContext).pop(true);
+                }
               } catch (e) {
                 if (dialogContext.mounted) {
                   ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -140,7 +141,7 @@ class _SekretarisDataPageState extends State<SekretarisDataPage> {
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: DropdownButtonFormField<String>(
-                              value: controllers['status']!.text.isEmpty
+                              initialValue: controllers['status']!.text.isEmpty
                                   ? null
                                   : controllers['status']!.text,
                               items: ['Dihuni', 'Sewa', 'Kosong']
