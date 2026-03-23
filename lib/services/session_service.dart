@@ -66,6 +66,43 @@ class SessionService {
   }
 
   /// =========================
+  /// TEMP RESIDENT CREDENTIAL
+  /// =========================
+  static Future<void> saveTemporaryResidentCredential({
+    required String wargaId,
+    required String nama,
+    required String authEmail,
+    required String password,
+    required String phone,
+    required bool whatsappSent,
+    String? whatsappError,
+  }) async {
+    await _prefs?.setString(
+      "temporaryResidentCredential",
+      jsonEncode({
+        "wargaId": wargaId,
+        "nama": nama,
+        "authEmail": authEmail,
+        "password": password,
+        "phone": phone,
+        "whatsappSent": whatsappSent,
+        "whatsappError": whatsappError,
+        "savedAt": DateTime.now().toIso8601String(),
+      }),
+    );
+  }
+
+  static Map<String, dynamic>? getTemporaryResidentCredential() {
+    final data = _prefs?.getString("temporaryResidentCredential");
+    if (data == null || data.isEmpty) return null;
+    return jsonDecode(data) as Map<String, dynamic>;
+  }
+
+  static Future<void> clearTemporaryResidentCredential() async {
+    await _prefs?.remove("temporaryResidentCredential");
+  }
+
+  /// =========================
   /// LOGOUT
   /// =========================
   static Future<void> logout() async {
