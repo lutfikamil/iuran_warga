@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 enum UserRole {
@@ -35,6 +36,22 @@ class PasswordResetResult {
     required this.sentToWhatsapp,
     required this.maskedPhone,
     required this.temporaryPassword,
+  });
+}
+
+class AdminResidentPasswordResetResult {
+  final String wargaId;
+  final String authUid;
+  final String authEmail;
+  final String password;
+  final bool generated;
+
+  const AdminResidentPasswordResetResult({
+    required this.wargaId,
+    required this.authUid,
+    required this.authEmail,
+    required this.password,
+    required this.generated,
   });
 }
 
@@ -280,6 +297,37 @@ class AuthService {
       await _db.collection('users').doc(currentUser.uid).set({
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+    }
+  }
+
+  Future<AdminResidentPasswordResetResult> adminResetResidentPassword({
+    required String wargaId,
+    String? newPassword,
+  }) async {
+    final callable = FirebaseFunctions.instance.httpsCallable(
+      'adminResetResidentPassword',
+    );
+
+    try {
+      final response = await callable.call(<String, dynamic>{
+        'wargaId': wargaId,
+        if (newPassword != null && newPassword.trim().isNotEmpty)
+          'newPassword': newPassword.trim(),
+      });
+
+      final data = Map<String, dynamic>.from(
+        (response.data as Map<dynamic, dynamic>?) ?? const {},
+      );
+
+      return AdminResidentPasswordResetResult(
+        wargaId: (data['wargaId'] ?? '').toString(),
+        authUid: (data['authUid'] ?? '').toString(),
+        authEmail: (data['authEmail'] ?? '').toString(),
+        password: (data['password'] ?? '').toString(),
+        generated: data['generated'] == true,
+      );
+    } on FirebaseFunctionsException catch (e) {
+      throw Exception(e.message ?? 'Reset password warga gagal.');
     }
   }
 

@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../services/auth_service.dart';
 import '../../services/iuran_service.dart';
 import '../../services/log_service.dart';
 import '../../services/sekretaris_sync_service.dart';
+import '../../services/session_service.dart';
 import '../../services/whatsapp_service.dart';
 import '../../services/users_service.dart';
 import '../../services/warga_lifecycle_service.dart';
@@ -107,7 +109,6 @@ class _AddWargaPageState extends State<AddWargaPage> {
           ? inputPassword
           : (_isEditing ? null : generateRandomPassword());
 
-
       final wargaData = <String, dynamic>{
         'nama': nama,
         'rumah': rumah,
@@ -121,6 +122,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
       };
       String wargaId;
       late final ResidentAccountProvisionResult accountResult;
+      AdminResidentPasswordResetResult? resetResult;
 
       if (_isEditing) {
         /// ================= UPDATE =================
@@ -138,8 +140,15 @@ class _AddWargaPageState extends State<AddWargaPage> {
           rumah: rumah,
           noHpPenghuni: hp,
           role: _selectedRole,
-          newRawPassword: password,
+          newRawPassword: null,
         );
+
+        if (password != null) {
+          resetResult = await AuthService().adminResetResidentPassword(
+            wargaId: wargaId,
+            newPassword: password,
+          );
+        }
 
         await SekretarisSyncService().syncWarga(
           rumah: rumah,
@@ -199,18 +208,30 @@ class _AddWargaPageState extends State<AddWargaPage> {
       /// =========================================
       /// 🔥 AUTO KIRIM WHATSAPP
       /// =========================================
-      if (hp.isNotEmpty && accountResult.rawPassword != null) {
+      final credentialEmail =
+          resetResult?.authEmail.isNotEmpty == true
+              ? resetResult!.authEmail
+              : accountResult.authEmail;
+      final credentialPassword =
+          resetResult?.password.isNotEmpty == true
+              ? resetResult!.password
+              : accountResult.rawPassword;
+
+      bool whatsappSent = false;
+      String? whatsappError;
+
+      if (hp.isNotEmpty && credentialPassword != null) {
         final message =
             '''
 Halo Bapak/Ibu $nama
 
-Akun Anda telah dibuat.
+${_isEditing ? 'Password akun Anda telah direset oleh pengurus.' : 'Akun Anda telah dibuat.'}
 Untuk mengetahui Informasi pembayaran iuran Anda dan
 Keadaan keuangan di Perumahan kita tercinta ini.
 
   Login:
-Email: ${accountResult.authEmail}
-Password: ${accountResult.rawPassword}
+Email: $credentialEmail
+Password: $credentialPassword
 
 Silakan login dan segera ganti password.
 Jika ada pertanyaan jangan sungkan untuk menghubungi kami baik di Group atau DM langsung.
@@ -221,15 +242,41 @@ Pengurus Perumahan Mulia Land Patria.
 
         try {
           await WhatsappService.sendMessage(phone: hp, message: message);
+          whatsappSent = true;
         } catch (e) {
+          whatsappError = e.toString();
           debugPrint('Gagal kirim WA: $e');
         }
+      }
+
+      if (credentialPassword != null) {
+        await SessionService.saveTemporaryResidentCredential(
+          wargaId: wargaId,
+          nama: nama,
+          authEmail: credentialEmail,
+          password: credentialPassword,
+          phone: hp,
+          whatsappSent: whatsappSent,
+          whatsappError: whatsappError,
+        );
       }
 
       /// =========================================
       /// 🔔 NOTIFIKASI
       /// =========================================
       if (mounted) {
+        if (credentialPassword != null) {
+          await _showCredentialDialog(
+            nama: nama,
+            wargaId: wargaId,
+            authEmail: credentialEmail,
+            password: credentialPassword,
+            phone: hp,
+            whatsappSent: whatsappSent,
+            whatsappError: whatsappError,
+          );
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -251,6 +298,74 @@ Pengurus Perumahan Mulia Land Patria.
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _showCredentialDialog({
+    required String nama,
+    required String wargaId,
+    required String authEmail,
+    required String password,
+    required String phone,
+    required bool whatsappSent,
+    String? whatsappError,
+  }) async {
+    final waStatus = phone.isEmpty
+        ? 'Nomor HP kosong. Kredensial disimpan sementara di perangkat ini.'
+        : whatsappSent
+        ? 'Kredensial juga sudah dikirim ke WhatsApp $phone.'
+        : 'WhatsApp gagal dikirim. Kredensial disimpan sementara di perangkat ini.';
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(_isEditing ? 'Password Baru Warga' : 'Kredensial Warga'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Nama: $nama'),
+              Text('Warga ID: $wargaId'),
+              const SizedBox(height: 12),
+              SelectableText('Email: $authEmail'),
+              const SizedBox(height: 8),
+              SelectableText('Password: $password'),
+              const SizedBox(height: 12),
+              Text(waStatus),
+              if ((whatsappError ?? '').isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Detail WA: $whatsappError',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await Clipboard.setData(
+                  ClipboardData(
+                    text:
+                        'Nama: $nama\nWarga ID: $wargaId\nEmail: $authEmail\nPassword: $password',
+                  ),
+                );
+                if (!dialogContext.mounted) return;
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('Kredensial berhasil disalin')),
+                );
+              },
+              child: const Text('Salin'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Tutup'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override

@@ -25,6 +25,7 @@ class _WargaPageState extends State<WargaPage> {
   List<DocumentSnapshot> _allWargaDocs = [];
   bool _isWarga = false;
   bool _isSendingTagihan = false;
+  bool _hasTemporaryCredential = false;
   bool get _isSmallScreen => MediaQuery.of(context).size.width < 600;
 
   @override
@@ -35,8 +36,11 @@ class _WargaPageState extends State<WargaPage> {
 
   Future<void> _loadUserRole() async {
     final role = AuthService.normalizeRole(SessionService.getRole());
+    final hasTemporaryCredential =
+        SessionService.getTemporaryResidentCredential() != null;
     setState(() {
       _isWarga = role == 'warga';
+      _hasTemporaryCredential = hasTemporaryCredential;
     });
   }
 
@@ -121,6 +125,12 @@ class _WargaPageState extends State<WargaPage> {
   Widget _buildDesktopActions() {
     return Row(
       children: [
+        if (_hasTemporaryCredential)
+          IconButton(
+            icon: const Icon(Icons.key),
+            tooltip: "Kredensial Terakhir",
+            onPressed: _showTemporaryCredentialDialog,
+          ),
         IconButton(
           icon: const Icon(Icons.calendar_month),
           tooltip: "Generate 1 Tahun",
@@ -160,14 +170,77 @@ class _WargaPageState extends State<WargaPage> {
         IconButton(
           icon: const Icon(Icons.add),
           tooltip: 'Tambah',
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AddWargaPage()),
-            );
-          },
+          onPressed: _openAddWargaPage,
         ),
       ],
+    );
+  }
+
+  Future<void> _openAddWargaPage() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AddWargaPage()),
+    );
+    if (!mounted) return;
+    setState(() {
+      _hasTemporaryCredential =
+          SessionService.getTemporaryResidentCredential() != null;
+    });
+  }
+
+  Future<void> _showTemporaryCredentialDialog() async {
+    final credential = SessionService.getTemporaryResidentCredential();
+    if (credential == null || !mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Kredensial Warga Terakhir'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Nama: ${credential['nama'] ?? '-'}'),
+              Text('Warga ID: ${credential['wargaId'] ?? '-'}'),
+              const SizedBox(height: 12),
+              SelectableText('Email: ${credential['authEmail'] ?? '-'}'),
+              const SizedBox(height: 8),
+              SelectableText('Password: ${credential['password'] ?? '-'}'),
+              const SizedBox(height: 12),
+              Text(
+                credential['whatsappSent'] == true
+                    ? 'WhatsApp sudah terkirim ke ${credential['phone'] ?? '-'}'
+                    : 'WhatsApp belum terkirim. Kredensial masih tersimpan sementara di perangkat ini.',
+              ),
+              if ((credential['whatsappError'] ?? '').toString().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Detail WA: ${credential['whatsappError']}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await SessionService.clearTemporaryResidentCredential();
+                if (!dialogContext.mounted) return;
+                Navigator.of(dialogContext).pop();
+                if (!mounted) return;
+                setState(() => _hasTemporaryCredential = false);
+              },
+              child: const Text('Hapus'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Tutup'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -196,11 +269,11 @@ class _WargaPageState extends State<WargaPage> {
               MaterialPageRoute(builder: (_) => const WargaKeluarPage()),
             );
             break;
+          case 'kredensial':
+            _showTemporaryCredentialDialog();
+            break;
           case 'tambah':
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AddWargaPage()),
-            );
+            _openAddWargaPage();
             break;
         }
       },
@@ -213,6 +286,11 @@ class _WargaPageState extends State<WargaPage> {
         const PopupMenuItem(value: 'export', child: Text('Export / Import')),
         const PopupMenuItem(value: 'kirim', child: Text('Kirim Tagihan')),
         const PopupMenuItem(value: 'arsip', child: Text('Arsip Warga Keluar')),
+        if (_hasTemporaryCredential)
+          const PopupMenuItem(
+            value: 'kredensial',
+            child: Text('Kredensial Terakhir'),
+          ),
         const PopupMenuItem(value: 'tambah', child: Text('Tambah Warga')),
       ],
     );
