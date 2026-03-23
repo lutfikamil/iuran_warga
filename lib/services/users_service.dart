@@ -112,7 +112,7 @@ Future<_AuthAccountResult> _ensureFirebaseAuthAccount({
   required String? newPassword,
 }) async {
   final tempPassword = newPassword ?? generateRandomPassword();
-  final appName = 'resident-auth-${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1 << 32)}';
+  final appName = 'resident-auth-${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1 << 30)}';
   FirebaseApp? secondaryApp;
 
   try {
