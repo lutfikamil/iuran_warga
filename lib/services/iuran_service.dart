@@ -52,10 +52,7 @@ class IuranService {
       throw Exception("Iuran $bulan $tahun sudah pernah dibuat");
     }
     final bulanIndex = BulanUtil.toInt(bulan);
-    final wargaSnapshot = await _firestore
-        .collection("warga")
-        .where("iuranAktif", isEqualTo: true)
-        .get();
+    final wargaSnapshot = await _firestore.collection("warga").get();
     final iuranAmount = await SettingsService().getIuranAmount();
     final jatuhTempo = DateTime(tahun, bulanIndex, 10);
     WriteBatch batch = _firestore.batch();

@@ -26,7 +26,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
 
   String? _selectedStatus;
   String _selectedRole = 'warga';
-  bool _isIuranAktifUntukRumahKosong = false;
+  bool _isIuranAktif = true;
 
   final List<String> _statusOptions = ['Dihuni', 'Kosong', 'Sewa'];
   final List<String> _roleOptions = [
@@ -75,9 +75,11 @@ class _AddWargaPageState extends State<AddWargaPage> {
         _selectedRole = AuthService.normalizeRole(
           data['role']?.toString() ?? 'warga',
         );
-        _isIuranAktifUntukRumahKosong =
-            data['status']?.toString().toLowerCase() == 'kosong' &&
-            data['iuranAktif'] == true;
+        final isRumahKosong =
+            data['status']?.toString().toLowerCase() == 'kosong';
+        _isIuranAktif = isRumahKosong
+            ? data['iuranAktif'] == true
+            : data['iuranAktif'] != false;
       }
     } catch (e) {
       if (!mounted) return;
@@ -123,7 +125,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
         'nomor': nomor,
         'noHpPenghuni': hp,
         'status': _selectedStatus,
-        'iuranAktif': isRumahKosong ? _isIuranAktifUntukRumahKosong : true,
+        'iuranAktif': _isIuranAktif,
         'role': _selectedRole,
         'updatedAt': FieldValue.serverTimestamp(),
       };
@@ -323,9 +325,18 @@ Pengurus Perumahan Mulia Land Patria.
                   setState(() {
                     final previousStatus = _selectedStatus;
                     _selectedStatus = newValue;
-                    if ((newValue ?? '').toLowerCase() == 'kosong' &&
-                        (previousStatus ?? '').toLowerCase() != 'kosong') {
-                      _isIuranAktifUntukRumahKosong = false;
+                    final normalizedNewValue =
+                        (newValue ?? '').toLowerCase();
+                    final normalizedPreviousStatus =
+                        (previousStatus ?? '').toLowerCase();
+
+                    if (normalizedNewValue == 'kosong' &&
+                        normalizedPreviousStatus != 'kosong') {
+                      _isIuranAktif = false;
+                    } else if (normalizedNewValue != 'kosong' &&
+                        normalizedPreviousStatus == 'kosong' &&
+                        !_isIuranAktif) {
+                      _isIuranAktif = true;
                     }
                   });
                 },
@@ -336,22 +347,22 @@ Pengurus Perumahan Mulia Land Patria.
                   return null;
                 },
               ),
-              if ((_selectedStatus ?? '').toLowerCase() == 'kosong') ...[
-                const SizedBox(height: 16),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Aktifkan iuran untuk rumah kosong'),
-                  subtitle: const Text(
-                    'Default nonaktif. Nyalakan bila rumah kosong ini tetap dikenakan iuran.',
-                  ),
-                  value: _isIuranAktifUntukRumahKosong,
-                  onChanged: (value) {
-                    setState(() {
-                      _isIuranAktifUntukRumahKosong = value;
-                    });
-                  },
+              const SizedBox(height: 16),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Iuran Aktif'),
+                subtitle: Text(
+                  (_selectedStatus ?? '').toLowerCase() == 'kosong'
+                      ? 'Default nonaktif untuk rumah kosong. Nyalakan bila rumah kosong ini tetap dikenakan iuran.'
+                      : 'Matikan bila warga tertentu sementara tidak perlu digenerate iuran.',
                 ),
-              ],
+                value: _isIuranAktif,
+                onChanged: (value) {
+                  setState(() {
+                    _isIuranAktif = value;
+                  });
+                },
+              ),
               const SizedBox(height: 16),
               DropdownButtonFormField(
                 initialValue: _selectedRole,
