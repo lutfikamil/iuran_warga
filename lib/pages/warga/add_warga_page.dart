@@ -228,7 +228,7 @@ Untuk mengetahui Informasi pembayaran iuran Anda dan
 Keadaan keuangan di Perumahan kita tercinta ini.
 
   Login:
-Email: $credentialEmail
+UserName: $rumah
 Password: $credentialPassword
 
 Silakan login dan segera ganti password.

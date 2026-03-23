@@ -368,8 +368,14 @@ class ExportImportService {
               columnIndex,
               'nohppemilik',
             );
-            final dihuniOlehImport = _getImportValue(row, columnIndex, 'dihunioleh');
-            final dihuniOleh = dihuniOlehImport.isNotEmpty ? dihuniOlehImport : nama;
+            final dihuniOlehImport = _getImportValue(
+              row,
+              columnIndex,
+              'dihunioleh',
+            );
+            final dihuniOleh = dihuniOlehImport.isNotEmpty
+                ? dihuniOlehImport
+                : nama;
             final noHpSekretaris = _getImportValue(
               row,
               columnIndex,
@@ -485,7 +491,9 @@ class ExportImportService {
           userSuccess++;
 
           /// 🔥 AUTO KIRIM WA
-          if (hp != null && hp.toString().isNotEmpty && accountResult.rawPassword != null) {
+          if (hp != null &&
+              hp.toString().isNotEmpty &&
+              accountResult.rawPassword != null) {
             await WhatsappService.sendMessage(
               phone: hp,
               message:
@@ -497,7 +505,7 @@ Untuk mengetahui Informasi pembayaran iuran Anda dan
 Keadaan keuangan di Perumahan kita tercinta ini.
 
   Login:
-Email: ${accountResult.authEmail}
+UserName: $rumah
 Password: ${accountResult.rawPassword}
 
 Silakan login dan segera ganti password.
