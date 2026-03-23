@@ -132,12 +132,12 @@ class _WargaPageState extends State<WargaPage> {
             onPressed: _showTemporaryCredentialDialog,
           ),
         IconButton(
-          icon: const Icon(Icons.calendar_month),
+          icon: const Icon(Icons.money_outlined),
           tooltip: "Generate 1 Tahun",
           onPressed: () => GeneratePage.generateIuranSetahunDialog(context),
         ),
         IconButton(
-          icon: const Icon(Icons.refresh),
+          icon: const Icon(Icons.money),
           tooltip: "Generate Iuran",
           onPressed: () => GeneratePage.generateIuranDialog(context),
         ),
@@ -153,7 +153,7 @@ class _WargaPageState extends State<WargaPage> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Icon(Icons.send),
+              : const Icon(Icons.wechat_sharp),
           tooltip: "Kirim Tagihan",
           onPressed: _isSendingTagihan ? null : _kirimTagihanBulanIni,
         ),
@@ -168,7 +168,7 @@ class _WargaPageState extends State<WargaPage> {
           },
         ),
         IconButton(
-          icon: const Icon(Icons.add),
+          icon: const Icon(Icons.person),
           tooltip: 'Tambah',
           onPressed: _openAddWargaPage,
         ),
