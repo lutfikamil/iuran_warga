@@ -69,10 +69,6 @@ class WargaLifecycleService {
       rumah: normalizedRumahBaru,
       noHpPenghuni: (warga['noHpPenghuni'] ?? '').toString(),
       role: (warga['role'] ?? 'warga').toString(),
-      identifier: _resolveIdentifier(
-        (warga['noHpPenghuni'] ?? '').toString(),
-        normalizedRumahBaru,
-      ),
     );
 
     await SekretarisSyncService().markRumahKosong(rumahLama);
@@ -174,8 +170,6 @@ class WargaLifecycleService {
     );
 
     final newDoc = _wargaRef.doc();
-    final identifier = _resolveIdentifier(hpBaru, normalizedRumah);
-
     await newDoc.set({
       'nama': namaBaru.trim(),
       'rumah': normalizedRumah,
@@ -195,7 +189,6 @@ class WargaLifecycleService {
       rumah: normalizedRumah,
       noHpPenghuni: hpBaru.trim(),
       role: roleBaru,
-      identifier: identifier,
       newRawPassword: '123456',
     );
 
@@ -227,9 +220,5 @@ class WargaLifecycleService {
     );
 
     return newDoc.id;
-  }
-
-  String _resolveIdentifier(String hp, String rumah) {
-    return hp.trim().isNotEmpty ? hp.trim() : rumah.trim();
   }
 }

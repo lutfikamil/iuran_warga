@@ -74,7 +74,7 @@ class _LoginDevPageState extends State<LoginDevPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text(
-                      'Masukkan email, nomor HP, atau nomor rumah yang terdaftar. Password sementara akan dikirim ke WhatsApp yang tersimpan pada akun.',
+                      'Masukkan email, nomor HP, atau nomor rumah yang terdaftar. Untuk akun warga berbasis Firebase Auth, reset otomatis via WhatsApp sudah dinonaktifkan dan perlu dibantu pengurus.',
                     ),
                     const SizedBox(height: 16),
                     TextFormField(

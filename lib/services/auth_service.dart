@@ -1,11 +1,7 @@
-import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'users_service.dart';
-import 'whatsapp_service.dart';
 
 enum UserRole {
   admin,
@@ -118,10 +114,6 @@ class AuthService {
     setCurrentUserRole(roleFromString(role));
   }
 
-  String hashPassword(String password) {
-    return sha256.convert(utf8.encode(password)).toString();
-  }
-
   Future<LoginResult> loginFlexible(String identifier, String password) async {
     final normalizedIdentifier = identifier.trim();
 
@@ -139,54 +131,99 @@ class AuthService {
           isAdmin: true,
         );
       } on FirebaseAuthException catch (_) {
-        // Lanjutkan fallback ke users collection jika bukan akun admin Firebase
-        // atau jika terjadi error autentikasi email/password.
+        // Lanjutkan pencarian akun warga/pengurus non-admin.
       }
     }
 
-    final userDoc = await _findUserByIdentifier(normalizedIdentifier);
-
-    if (userDoc == null || userDoc.data() == null) {
+    final residentAccount = await _findResidentAccount(normalizedIdentifier);
+    if (residentAccount == null) {
       throw Exception('User tidak ditemukan');
     }
 
-    final data = userDoc.data()!;
-
-    if (data['password'] != hashPassword(password)) {
-      throw Exception('Password salah');
-    }
-
-    if (data['isActive'] == false) {
+    if (residentAccount.isActive == false) {
       throw Exception('Akun sudah tidak aktif');
     }
 
-    final roleString = normalizeRole((data['role'] ?? 'warga').toString());
-    final role = roleFromString(roleString);
+    await _signInResident(
+      email: residentAccount.authEmail,
+      password: password,
+    );
 
+    final roleString = normalizeRole(residentAccount.role);
+    final role = roleFromString(roleString);
     setCurrentUserRole(role);
+
     return LoginResult(
       role: roleString,
-      identifier: normalizedIdentifier,
+      identifier: residentAccount.wargaId,
       isAdmin: false,
-      userDocId: userDoc.id,
+      userDocId: residentAccount.userDocId,
     );
   }
 
-  Future<DocumentSnapshot<Map<String, dynamic>>?> _findUserByIdentifier(
-    String identifier,
-  ) async {
-    final fields = ['identifier', 'noHpPenghuni', 'rumah', 'email'];
-
-    for (final field in fields) {
-      final result = await _db
-          .collection('users')
-          .where(field, isEqualTo: identifier)
-          .limit(1)
-          .get();
-
-      if (result.docs.isNotEmpty) {
-        return result.docs.first;
+  Future<void> _signInResident({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'invalid-credential':
+        case 'wrong-password':
+        case 'invalid-login-credentials':
+          throw Exception('Password salah');
+        case 'user-not-found':
+          throw Exception('Akun Firebase Auth tidak ditemukan');
+        case 'too-many-requests':
+          throw Exception('Terlalu banyak percobaan login. Coba lagi nanti.');
+        default:
+          throw Exception(e.message ?? 'Gagal login ke Firebase Auth');
       }
+    }
+  }
+
+  Future<_ResidentAccountLookup?> _findResidentAccount(String identifier) async {
+    final normalized = identifier.trim();
+    if (normalized.isEmpty) return null;
+
+    final usersRef = _db.collection('users');
+
+    Future<_ResidentAccountLookup?> lookupByField(String field) async {
+      final result = await usersRef.where(field, isEqualTo: normalized).limit(1).get();
+      if (result.docs.isEmpty) return null;
+      final doc = result.docs.first;
+      return _ResidentAccountLookup.fromFirestore(doc.id, doc.data());
+    }
+
+    final userLookups = <Future<_ResidentAccountLookup?> Function()>[
+      () => lookupByField('authEmail'),
+      () => lookupByField('noHpPenghuni'),
+      () => lookupByField('rumah'),
+      () => lookupByField('wargaId'),
+    ];
+
+    for (final lookup in userLookups) {
+      final result = await lookup();
+      if (result != null) return result;
+    }
+
+    final wargaFields = normalized.contains('@')
+        ? ['email']
+        : ['noHpPenghuni', 'rumah'];
+
+    for (final field in wargaFields) {
+      final result = await _db.collection('warga').where(field, isEqualTo: normalized).limit(1).get();
+      if (result.docs.isEmpty) continue;
+
+      final wargaDoc = result.docs.first;
+      final userDoc = await usersRef.where('wargaId', isEqualTo: wargaDoc.id).limit(1).get();
+      if (userDoc.docs.isEmpty) continue;
+
+      return _ResidentAccountLookup.fromFirestore(
+        userDoc.docs.first.id,
+        userDoc.docs.first.data(),
+      );
     }
 
     return null;
@@ -200,70 +237,15 @@ class AuthService {
     return '••••$visibleEnd';
   }
 
-  Future<PasswordResetResult> resetPasswordForResident(
-    String identifier,
-  ) async {
-    final normalizedIdentifier = identifier.trim();
-    if (normalizedIdentifier.isEmpty) {
-      throw Exception('Identifier wajib diisi.');
-    }
-
-    final userDoc = await _findUserByIdentifier(normalizedIdentifier);
-    if (userDoc == null || userDoc.data() == null) {
+  Future<PasswordResetResult> resetPasswordForResident(String identifier) async {
+    final residentAccount = await _findResidentAccount(identifier.trim());
+    if (residentAccount == null) {
       throw Exception('Akun tidak ditemukan.');
     }
 
-    final userData = userDoc.data()!;
-    if (userData['isActive'] == false) {
-      throw Exception('Akun sudah tidak aktif.');
-    }
-
-    final phone = (userData['noHpPenghuni'] ?? '').toString().trim();
-    if (phone.isEmpty) {
-      throw Exception(
-        'Nomor WhatsApp belum terdaftar. Silakan hubungi pengurus untuk reset manual.',
-      );
-    }
-
-    final temporaryPassword = generateRandomPassword(length: 10);
-    await _db.collection('users').doc(userDoc.id).update({
-      'password': hashPassword(temporaryPassword),
-      'forceChangePassword': true,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-
-    final nama = (userData['nama'] ?? 'Warga').toString();
-    final rumah = (userData['rumah'] ?? '-').toString();
-
-    try {
-      await WhatsappService.sendMessage(
-        phone: phone,
-        message:
-            '''Halo Bapak/Ibu $nama
-
-Kami menerima permintaan reset password untuk akun rumah $rumah.
-
-Password sementara Anda:
-$temporaryPassword
-
-Silakan login menggunakan password sementara ini lalu segera ganti password di menu profil.
-Jika Anda tidak merasa meminta reset password, segera hubungi pengurus.
-
-Terima kasih.
-Pengurus Perumahan Mulia Land Patria.''',
-      );
-      return PasswordResetResult(
-        sentToWhatsapp: true,
-        maskedPhone: maskPhoneNumber(phone),
-        temporaryPassword: temporaryPassword,
-      );
-    } catch (_) {
-      return PasswordResetResult(
-        sentToWhatsapp: false,
-        maskedPhone: maskPhoneNumber(phone),
-        temporaryPassword: temporaryPassword,
-      );
-    }
+    throw Exception(
+      'Reset password otomatis via WhatsApp sudah dinonaktifkan karena akun warga sekarang memakai Firebase Auth penuh. Silakan hubungi pengurus untuk set ulang password dari panel/admin service.',
+    );
   }
 
   Future<void> changePassword({
@@ -272,42 +254,63 @@ Pengurus Perumahan Mulia Land Patria.''',
     required bool isAdmin,
     required String identifier,
   }) async {
-    if (isAdmin) {
-      final currentUser = _auth.currentUser;
-      if (currentUser == null || currentUser.email == null) {
-        throw Exception('Sesi admin tidak valid. Silakan login ulang.');
-      }
-
-      final credential = EmailAuthProvider.credential(
-        email: currentUser.email!,
-        password: currentPassword,
-      );
-
-      await currentUser.reauthenticateWithCredential(credential);
-      await currentUser.updatePassword(newPassword);
-      return;
+    final currentUser = _auth.currentUser;
+    if (currentUser == null || currentUser.email == null) {
+      throw Exception('Sesi tidak valid. Silakan login ulang.');
     }
 
-    final userDoc = await _findUserByIdentifier(identifier);
+    final credential = EmailAuthProvider.credential(
+      email: currentUser.email!,
+      password: currentPassword,
+    );
 
-    if (userDoc == null || userDoc.data() == null) {
-      throw Exception('Akun user tidak ditemukan');
+    await currentUser.reauthenticateWithCredential(credential);
+    await currentUser.updatePassword(newPassword);
+
+    if (!isAdmin) {
+      await _db.collection('users').doc(currentUser.uid).set({
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
     }
-
-    final userData = userDoc.data()!;
-    if (userData['password'] != hashPassword(currentPassword)) {
-      throw Exception('Password saat ini salah');
-    }
-
-    await _db.collection('users').doc(userDoc.id).update({
-      'password': hashPassword(newPassword),
-      'forceChangePassword': false,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
   }
 
   bool hasAnyRole(List<UserRole> allowedRoles) {
     if (allowedRoles.isEmpty) return true;
     return allowedRoles.contains(_currentUserRole);
+  }
+}
+
+class _ResidentAccountLookup {
+  final String userDocId;
+  final String wargaId;
+  final String authEmail;
+  final String role;
+  final bool isActive;
+
+  const _ResidentAccountLookup({
+    required this.userDocId,
+    required this.wargaId,
+    required this.authEmail,
+    required this.role,
+    required this.isActive,
+  });
+
+  factory _ResidentAccountLookup.fromFirestore(
+    String userDocId,
+    Map<String, dynamic> data,
+  ) {
+    final authEmail = (data['authEmail'] ?? '').toString().trim();
+    final wargaId = (data['wargaId'] ?? '').toString().trim();
+    if (authEmail.isEmpty || wargaId.isEmpty) {
+      throw Exception('Akun warga belum termigrasi penuh ke Firebase Auth.');
+    }
+
+    return _ResidentAccountLookup(
+      userDocId: userDocId,
+      wargaId: wargaId,
+      authEmail: authEmail,
+      role: (data['role'] ?? 'warga').toString(),
+      isActive: data['isActive'] != false,
+    );
   }
 }
