@@ -26,8 +26,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadSessionInfo() async {
     final role = AuthService.normalizeRole(SessionService.getRole());
-    final identifier =  SessionService.getIdentifier();
-    final isAdmin =  SessionService.isAdminLogin();
+    final identifier = SessionService.getIdentifier();
+    final isAdmin = SessionService.isAdminLogin();
 
     if (!mounted) return;
 
@@ -84,7 +84,6 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
 
-        /// LOGS HANYA ADMIN
         const Expanded(child: LogsPage()),
       ],
     );
@@ -96,7 +95,9 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildWargaProfile() {
     return Column(
       children: [
-        Expanded(child: DetailWargaPage(wargaId: _identifier)),
+        Expanded(
+          child: DetailWargaPage(wargaId: _identifier, showAppBar: false),
+        ),
 
         Padding(
           padding: const EdgeInsets.all(16),
@@ -106,6 +107,8 @@ class _ProfilePageState extends State<ProfilePage> {
             label: const Text("Ganti Password"),
             style: ElevatedButton.styleFrom(
               minimumSize: const Size.fromHeight(50),
+              backgroundColor: Colors.blueAccent,
+              foregroundColor: Colors.white,
             ),
           ),
         ),

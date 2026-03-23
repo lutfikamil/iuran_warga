@@ -9,8 +9,13 @@ import 'mutasi_warga_page.dart';
 
 class DetailWargaPage extends StatelessWidget {
   final String wargaId;
+  final bool showAppBar; // Tambahkan variabel ini
 
-  DetailWargaPage({super.key, required this.wargaId});
+  DetailWargaPage({
+    super.key,
+    required this.wargaId,
+    this.showAppBar = true, // Default true agar halaman lain tidak error
+  });
 
   final bulanUtil = ListBulanIuran();
 
@@ -36,68 +41,77 @@ class DetailWargaPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iuranStream = FirebaseFirestore.instance
-        .collection('iuran')
-        .where('wargaId', isEqualTo: wargaId)
-        .snapshots();
+    // Kita buat isi konten utamanya di sini
+    Widget mainContent = FutureBuilder<Map<String, dynamic>>(
+      future: _loadInitialData(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
+        final wargaData = snapshot.data!['warga'] as Map<String, dynamic>?;
+        final role = snapshot.data!['role'] as String;
+
+        if (wargaData == null) {
+          return const Center(child: Text('Data tidak ditemukan'));
+        }
+
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance
+              .collection('iuran')
+              .where('wargaId', isEqualTo: wargaId)
+              .snapshots(),
+          builder: (context, iuranSnapshot) {
+            if (!iuranSnapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final docs = iuranSnapshot.data!.docs;
+            final totalBayar = docs.fold<num>(0, (total, doc) {
+              final data = doc.data();
+              if (data['status'] != 'lunas') return total;
+              return total + ((data['jumlah'] as num?) ?? 0);
+            });
+            final totalTransaksi = docs
+                .where((e) => e.data()['status'] == 'lunas')
+                .length;
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _cardWarga(wargaData),
+                  const SizedBox(height: 16),
+                  _cardSummary(totalBayar, totalTransaksi),
+                  const SizedBox(height: 16),
+                  _rekapCard(docs, role, context),
+                  const SizedBox(height: 20),
+                  _actionButtons(context, wargaData),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    // Jika showAppBar false (dipanggil dari Profile),
+    // langsung kembalikan konten tanpa Scaffold & AppBar
+    if (!showAppBar) {
+      return mainContent;
+    }
+
+    // Jika showAppBar true (dipanggil normal), bungkus dengan Scaffold
     return Scaffold(
       appBar: AppBar(title: const Text('Detail Warga')),
-      body: FutureBuilder<Map<String, dynamic>>(
-        future: _loadInitialData(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final wargaData = snapshot.data!['warga'] as Map<String, dynamic>?;
-          final role = snapshot.data!['role'] as String;
-
-          if (wargaData == null) {
-            return const Center(child: Text('Data tidak ditemukan'));
-          }
-
-          return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: iuranStream,
-            builder: (context, iuranSnapshot) {
-              if (!iuranSnapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final docs = iuranSnapshot.data!.docs;
-              final totalBayar = docs.fold<num>(0, (total, doc) {
-                final data = doc.data();
-                if (data['status'] != 'lunas') return total;
-                return total + ((data['jumlah'] as num?) ?? 0);
-              });
-              final totalTransaksi = docs
-                  .where((e) => e.data()['status'] == 'lunas')
-                  .length;
-
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _cardWarga(wargaData),
-                    const SizedBox(height: 16),
-                    _cardSummary(totalBayar, totalTransaksi),
-                    const SizedBox(height: 16),
-                    _rekapCard(docs, role, context),
-                    const SizedBox(height: 20),
-                    _actionButtons(context, wargaData),
-                  ],
-                ),
-              );
-            },
-          );
-        },
-      ),
+      body: mainContent,
     );
   }
 
+  // --- Widget Helper tetap sama (Copy-Paste dari kode lama Anda) ---
   Widget _cardWarga(Map<String, dynamic> data) {
     return Card(
       child: Padding(
@@ -148,7 +162,6 @@ class DetailWargaPage extends StatelessWidget {
       'sekretaris',
       'petugas',
     ].contains(role);
-
     final now = DateTime.now();
     final tahunList = docs.isEmpty
         ? [now.year]
@@ -160,7 +173,10 @@ class DetailWargaPage extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            const Text('Rekap Pembayaran'),
+            const Text(
+              'Rekap Pembayaran',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 10),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -178,7 +194,6 @@ class DetailWargaPage extends StatelessWidget {
                             d.data()['status'] != 'lunas',
                       )
                       .toList();
-
                   return DataRow(
                     cells: [
                       DataCell(Text(bulan)),
@@ -189,7 +204,10 @@ class DetailWargaPage extends StatelessWidget {
                       if (canPay)
                         DataCell(
                           unpaid.isEmpty
-                              ? const Text('Lunas')
+                              ? const Text(
+                                  'Lunas',
+                                  style: TextStyle(color: Colors.green),
+                                )
                               : ElevatedButton(
                                   onPressed: () =>
                                       _handleBayar(context, bulan, unpaid),
@@ -213,10 +231,8 @@ class DetailWargaPage extends StatelessWidget {
     List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
   ) async {
     if (docs.isEmpty) return;
-
     final doc = docs.first;
     final tahun = doc.data()['tahun'] ?? DateTime.now().year;
-
     try {
       await IuranService().bayarIuranWarga(
         wargaId: wargaId,
@@ -270,11 +286,17 @@ class DetailWargaPage extends StatelessWidget {
   }
 
   Widget _info(String label, dynamic value) {
-    return Row(
-      children: [
-        SizedBox(width: 100, child: Text(label)),
-        Expanded(child: Text(value ?? '-')),
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(label, style: const TextStyle(color: Colors.grey)),
+          ),
+          Expanded(child: Text(value?.toString() ?? '-')),
+        ],
+      ),
     );
   }
 
@@ -283,7 +305,10 @@ class DetailWargaPage extends StatelessWidget {
       children: [
         Text(label),
         const SizedBox(height: 5),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
       ],
     );
   }
