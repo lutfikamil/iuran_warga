@@ -375,17 +375,21 @@ class _WargaPageState extends State<WargaPage> {
                     ),
                   ),
                 ],
+
                 backgroundColor: index.isEven
                     ? Colors.grey.shade50
                     : Colors.white,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => DetailWargaPage(wargaId: wargaDoc.id),
-                    ),
-                  );
-                },
+                onTap: _isWarga
+                    ? null
+                    : () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                DetailWargaPage(wargaId: wargaDoc.id),
+                          ),
+                        );
+                      },
               );
             }),
           ],

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../../services/log_service.dart';
+import '../../services/auth_service.dart';
+import '../../services/session_service.dart';
 import 'export_laporan_page.dart';
 
 class LaporanPage extends StatefulWidget {
@@ -18,6 +20,10 @@ class _LaporanPageState extends State<LaporanPage> {
   DateTime? _selectedDate;
   String _filterType = 'Detail';
   final List<String> _selectedTransactionIds = [];
+
+  // <-- TAMBAHKAN INI
+  String get _role => AuthService.normalizeRole(SessionService.getRole());
+  bool get _isWarga => _role == 'warga';
 
   Future<void> _pickMonthYear(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -351,67 +357,71 @@ class _LaporanPageState extends State<LaporanPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Laporan Keuangan"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.file_download),
-            tooltip: 'Export Laporan',
-            onPressed: () async {
-              final data = await getTransactions();
-              if (!context.mounted) return;
-              if (data.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Tidak ada data untuk di-export'),
-                  ),
-                );
-                return;
-              }
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ExportLaporanPage(
-                    transactions: data,
-                    filterType: _filterType,
-                    selectedDate: _selectedDate,
-                  ),
+        // <-- SEMBUNYIKAN ACTIONS JIKA WARGA
+        actions: _isWarga
+            ? null
+            : [
+                IconButton(
+                  icon: const Icon(Icons.file_download),
+                  tooltip: 'Export Laporan',
+                  onPressed: () async {
+                    final data = await getTransactions();
+                    if (!context.mounted) return;
+                    if (data.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Tidak ada data untuk di-export'),
+                        ),
+                      );
+                      return;
+                    }
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ExportLaporanPage(
+                          transactions: data,
+                          filterType: _filterType,
+                          selectedDate: _selectedDate,
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.check_circle_outline),
-            tooltip: 'Setujui Transaksi Terpilih',
-            onPressed: _approveSelectedTransactions,
-          ),
-          PopupMenuButton<String>(
-            onSelected: (String value) {
-              setState(() {
-                _filterType = value;
-                if (value == 'Bulanan' || value == 'Tahunan') {
-                  _pickMonthYear(context);
-                } else {
-                  _selectedDate = null;
-                }
-              });
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'Global',
-                child: Text('Global'),
-              ),
-              const PopupMenuItem<String>(
-                value: 'Bulanan',
-                child: Text('Bulanan'),
-              ),
-              const PopupMenuItem<String>(
-                value: 'Tahunan',
-                child: Text('Tahunan'),
-              ),
-            ],
-            icon: const Icon(Icons.filter_list),
-            tooltip: 'Filter Laporan',
-          ),
-        ],
+                IconButton(
+                  icon: const Icon(Icons.check_circle_outline),
+                  tooltip: 'Setujui Transaksi Terpilih',
+                  onPressed: _approveSelectedTransactions,
+                ),
+                PopupMenuButton<String>(
+                  onSelected: (String value) {
+                    setState(() {
+                      _filterType = value;
+                      if (value == 'Bulanan' || value == 'Tahunan') {
+                        _pickMonthYear(context);
+                      } else {
+                        _selectedDate = null;
+                      }
+                    });
+                  },
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<String>>[
+                        const PopupMenuItem<String>(
+                          value: 'Global',
+                          child: Text('Global'),
+                        ),
+                        const PopupMenuItem<String>(
+                          value: 'Bulanan',
+                          child: Text('Bulanan'),
+                        ),
+                        const PopupMenuItem<String>(
+                          value: 'Tahunan',
+                          child: Text('Tahunan'),
+                        ),
+                      ],
+                  icon: const Icon(Icons.filter_list),
+                  tooltip: 'Filter Laporan',
+                ),
+              ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: transactionQuery.orderBy('tanggal').snapshots(),

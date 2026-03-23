@@ -1,8 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import 'users_service.dart';
-
 enum UserRole {
   admin,
   ketua,
@@ -144,10 +142,7 @@ class AuthService {
       throw Exception('Akun sudah tidak aktif');
     }
 
-    await _signInResident(
-      email: residentAccount.authEmail,
-      password: password,
-    );
+    await _signInResident(email: residentAccount.authEmail, password: password);
 
     final roleString = normalizeRole(residentAccount.role);
     final role = roleFromString(roleString);
@@ -183,14 +178,19 @@ class AuthService {
     }
   }
 
-  Future<_ResidentAccountLookup?> _findResidentAccount(String identifier) async {
+  Future<_ResidentAccountLookup?> _findResidentAccount(
+    String identifier,
+  ) async {
     final normalized = identifier.trim();
     if (normalized.isEmpty) return null;
 
     final usersRef = _db.collection('users');
 
     Future<_ResidentAccountLookup?> lookupByField(String field) async {
-      final result = await usersRef.where(field, isEqualTo: normalized).limit(1).get();
+      final result = await usersRef
+          .where(field, isEqualTo: normalized)
+          .limit(1)
+          .get();
       if (result.docs.isEmpty) return null;
       final doc = result.docs.first;
       return _ResidentAccountLookup.fromFirestore(doc.id, doc.data());
@@ -213,11 +213,18 @@ class AuthService {
         : ['noHpPenghuni', 'rumah'];
 
     for (final field in wargaFields) {
-      final result = await _db.collection('warga').where(field, isEqualTo: normalized).limit(1).get();
+      final result = await _db
+          .collection('warga')
+          .where(field, isEqualTo: normalized)
+          .limit(1)
+          .get();
       if (result.docs.isEmpty) continue;
 
       final wargaDoc = result.docs.first;
-      final userDoc = await usersRef.where('wargaId', isEqualTo: wargaDoc.id).limit(1).get();
+      final userDoc = await usersRef
+          .where('wargaId', isEqualTo: wargaDoc.id)
+          .limit(1)
+          .get();
       if (userDoc.docs.isEmpty) continue;
 
       return _ResidentAccountLookup.fromFirestore(
@@ -237,7 +244,9 @@ class AuthService {
     return '••••$visibleEnd';
   }
 
-  Future<PasswordResetResult> resetPasswordForResident(String identifier) async {
+  Future<PasswordResetResult> resetPasswordForResident(
+    String identifier,
+  ) async {
     final residentAccount = await _findResidentAccount(identifier.trim());
     if (residentAccount == null) {
       throw Exception('Akun tidak ditemukan.');

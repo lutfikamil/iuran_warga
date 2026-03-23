@@ -66,29 +66,10 @@ class AppRoutes {
 
   static Map<String, WidgetBuilder> routes = {
     login: (_) => kDebugMode ? const LoginDevPage() : const LoginPage(),
-    dashboard: (_) => _buildGuardedRoute(
-      page: const DashboardPage(),
-      allowedRoles: [
-        UserRole.admin,
-        UserRole.ketua,
-        UserRole.bendahara,
-        UserRole.sekretaris,
-        UserRole.petugas,
-        UserRole.pengurusMusolah,
-        UserRole.warga,
-      ],
-    ),
+    dashboard: (_) =>
+        _buildGuardedRoute(page: const DashboardPage(), allowedRoles: []),
 
-    warga: (_) => _buildGuardedRoute(
-      page: const WargaPage(),
-      allowedRoles: [
-        UserRole.admin,
-        UserRole.ketua,
-        UserRole.bendahara,
-        UserRole.sekretaris,
-        UserRole.petugas,
-      ],
-    ),
+    warga: (_) => _buildGuardedRoute(page: const WargaPage(), allowedRoles: []),
     pembayaran: (_) => _buildGuardedRoute(
       page: const PembayaranPage(),
       allowedRoles: [UserRole.admin, UserRole.bendahara, UserRole.petugas],
@@ -119,57 +100,22 @@ class AppRoutes {
       page: const AddPemasukanPage(),
       allowedRoles: [UserRole.admin, UserRole.bendahara],
     ),
-    laporan: (_) => _buildGuardedRoute(
-      page: const LaporanPage(),
-      allowedRoles: [
-        UserRole.admin,
-        UserRole.ketua,
-        UserRole.bendahara,
-        UserRole.sekretaris,
-      ],
-    ),
-    laporanGlobal: (_) => _buildGuardedRoute(
-      page: const LaporanGlobalPage(),
-      allowedRoles: [UserRole.admin, UserRole.ketua],
-    ),
-    //daftarIuran: (_) => _buildGuardedRoute(
-    //  page: const DaftarIuranPage(),
-    //  allowedRoles: [
-    //    UserRole.admin,
-    //    UserRole.bendahara,
-    //    UserRole.petugas,
-    //    UserRole.warga,
-    //  ],
-    //),
+    laporan: (_) =>
+        _buildGuardedRoute(page: const LaporanPage(), allowedRoles: []),
+    laporanGlobal: (_) =>
+        _buildGuardedRoute(page: const LaporanGlobalPage(), allowedRoles: []),
     settings: (_) => _buildGuardedRoute(
       page: const SettingsPage(),
-      allowedRoles: [UserRole.admin],
+      allowedRoles: [UserRole.admin, UserRole.sekretaris],
     ),
-    profile: (_) => _buildGuardedRoute(
-      page: const ProfilePage(),
-      allowedRoles: [
-        UserRole.admin,
-        UserRole.ketua,
-        UserRole.bendahara,
-        UserRole.sekretaris,
-        UserRole.petugas,
-        UserRole.pengurusMusolah,
-        UserRole.warga,
-      ],
-    ),
+    profile: (_) =>
+        _buildGuardedRoute(page: const ProfilePage(), allowedRoles: []),
     sekretarisData: (_) => _buildGuardedRoute(
       page: const SekretarisDataPage(),
       allowedRoles: [UserRole.admin, UserRole.ketua, UserRole.sekretaris],
     ),
-    keuanganMusolah: (_) => _buildGuardedRoute(
-      page: const KeuanganMusolahPage(),
-      allowedRoles: [
-        UserRole.admin,
-        UserRole.ketua,
-        UserRole.bendahara,
-        UserRole.pengurusMusolah,
-      ],
-    ),
+    keuanganMusolah: (_) =>
+        _buildGuardedRoute(page: const KeuanganMusolahPage(), allowedRoles: []),
     unauthorized: (_) => const UnauthorizedPage(), // Tambahkan rute ini juga
   };
 }

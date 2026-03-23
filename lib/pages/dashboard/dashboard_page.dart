@@ -11,10 +11,11 @@ class DashboardPage extends StatelessWidget {
   bool get _showSekretarisMenu =>
       _role == 'admin' || _role == 'ketua' || _role == 'sekretaris';
 
-  bool get _showMusolahMenu =>
+  bool get _noShowWargaMenu =>
       _role == 'admin' ||
       _role == 'ketua' ||
       _role == 'bendahara' ||
+      _role == 'sekretaris' ||
       _role == 'pengurus_musolah';
 
   /// =========================
@@ -25,27 +26,43 @@ class DashboardPage extends StatelessWidget {
       _menu("Profile", Icons.person, AppRoutes.profile),
       _menu("Laporan Global", Icons.book, AppRoutes.laporanGlobal),
       _menu("Data Warga", Icons.people, AppRoutes.warga, Colors.blue),
-      _menu(
-        "Pemasukan Iuran",
-        Icons.payments,
-        AppRoutes.pembayaran,
-        Colors.green,
-      ),
-      _menu(
-        "Pemasukan Umum",
-        Icons.trending_down,
-        AppRoutes.pemasukan,
-        Colors.green,
-      ),
-      _menu(
-        "Pengeluaran",
-        Icons.trending_up,
-        AppRoutes.pengeluaran,
-        Colors.red,
-      ),
       _menu("Laporan", Icons.bar_chart, AppRoutes.laporan),
-      _menu("Pengaturan", Icons.settings, AppRoutes.settings),
+      _menu(
+        "Keuangan Musolah",
+        Icons.mosque,
+        AppRoutes.keuanganMusolah,
+        Colors.green[700],
+      ),
     ];
+    if (_noShowWargaMenu) {
+      items.insert(
+        3,
+        _menu(
+          "Pemasukan Iuran",
+          Icons.payments,
+          AppRoutes.pembayaran,
+          Colors.green,
+        ),
+      );
+      items.insert(
+        4,
+        _menu(
+          "Pemasukan Umum",
+          Icons.trending_down,
+          AppRoutes.pemasukan,
+          Colors.green,
+        ),
+      );
+      items.insert(
+        5,
+        _menu(
+          "Pengeluaran",
+          Icons.trending_up,
+          AppRoutes.pengeluaran,
+          Colors.red,
+        ),
+      );
+    }
 
     if (_showSekretarisMenu) {
       items.insert(
@@ -57,17 +74,7 @@ class DashboardPage extends StatelessWidget {
           Colors.teal,
         ),
       );
-    }
-
-    if (_showMusolahMenu) {
-      items.add(
-        _menu(
-          "Keuangan Musolah",
-          Icons.mosque,
-          AppRoutes.keuanganMusolah,
-          Colors.green[700],
-        ),
-      );
+      items.insert(8, _menu("Pengaturan", Icons.settings, AppRoutes.settings));
     }
 
     return items;
@@ -159,7 +166,7 @@ class DashboardPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Dashboard Iuran"),
+        title: const Text("Beranda Menu"),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
