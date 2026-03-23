@@ -471,25 +471,21 @@ class ExportImportService {
           final hp = user['noHpPenghuni'];
           final rumah = user['rumah'];
 
-          final identifier = _resolveIdentifier(hp, rumah);
-          final email = '$identifier@mulialand.com';
-
           final generatedPassword = generateRandomPassword();
 
-          await upsertUserLogin(
+          final accountResult = await upsertUserLogin(
             wargaId: user['wargaId'],
             nama: nama,
             rumah: rumah,
             noHpPenghuni: hp,
             role: user['role'],
-            identifier: identifier,
             newRawPassword: generatedPassword,
           );
 
           userSuccess++;
 
           /// 🔥 AUTO KIRIM WA
-          if (hp != null && hp.toString().isNotEmpty) {
+          if (hp != null && hp.toString().isNotEmpty && accountResult.rawPassword != null) {
             await WhatsappService.sendMessage(
               phone: hp,
               message:
@@ -501,8 +497,8 @@ Untuk mengetahui Informasi pembayaran iuran Anda dan
 Keadaan keuangan di Perumahan kita tercinta ini.
 
   Login:
-Email: $email
-Password: $generatedPassword
+Email: ${accountResult.authEmail}
+Password: ${accountResult.rawPassword}
 
 Silakan login dan segera ganti password.
 Jika ada pertanyaan jangan sungkan untuk menghubungi kami baik di Group atau DM langsung.
@@ -581,10 +577,6 @@ Pengurus Perumahan Mulia Land Patria.
 
   static bool _isValidHp(String hp) {
     return RegExp(r'^[0-9+() -]+$').hasMatch(hp);
-  }
-
-  static String _resolveIdentifier(String hp, String rumah) {
-    return hp.isNotEmpty ? hp : rumah;
   }
 
   static const List<String> _requiredImportHeaders = [
