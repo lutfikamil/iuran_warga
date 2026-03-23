@@ -51,12 +51,6 @@ class _AddWargaPageState extends State<AddWargaPage> {
     }
   }
 
-  String _resolveIdentifier() {
-    final hp = _hpController.text.trim();
-    if (hp.isNotEmpty) return hp;
-    return _rumahController.text.trim();
-  }
-
   Future<void> _loadWargaData() async {
     setState(() => _isLoading = true);
 
@@ -108,15 +102,11 @@ class _AddWargaPageState extends State<AddWargaPage> {
       final nomor = rumahData['nomor'];
       final hp = _hpController.text.trim();
 
-      final identifier = _resolveIdentifier();
-      final email = "$identifier@mulialand.com";
-
       final inputPassword = _passwordController.text.trim();
       final password = inputPassword.isNotEmpty
           ? inputPassword
           : (_isEditing ? null : generateRandomPassword());
 
-      final isRumahKosong = (_selectedStatus ?? '').toLowerCase() == 'kosong';
 
       final wargaData = <String, dynamic>{
         'nama': nama,
@@ -130,6 +120,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
         'updatedAt': FieldValue.serverTimestamp(),
       };
       String wargaId;
+      late final ResidentAccountProvisionResult accountResult;
 
       if (_isEditing) {
         /// ================= UPDATE =================
@@ -141,13 +132,12 @@ class _AddWargaPageState extends State<AddWargaPage> {
             .update(wargaData);
 
         /// 🔥 update user login juga
-        await upsertUserLogin(
+        accountResult = await upsertUserLogin(
           wargaId: wargaId,
           nama: nama,
           rumah: rumah,
           noHpPenghuni: hp,
           role: _selectedRole,
-          identifier: identifier,
           newRawPassword: password,
         );
 
@@ -181,13 +171,12 @@ class _AddWargaPageState extends State<AddWargaPage> {
         _generatedIuranCount = generatedCount;
 
         /// 🔥 buat user login (PUSAT LOGIKA)
-        await upsertUserLogin(
+        accountResult = await upsertUserLogin(
           wargaId: wargaId,
           nama: nama,
           rumah: rumah,
           noHpPenghuni: hp,
           role: _selectedRole,
-          identifier: identifier,
           newRawPassword: password,
         );
 
@@ -210,7 +199,7 @@ class _AddWargaPageState extends State<AddWargaPage> {
       /// =========================================
       /// 🔥 AUTO KIRIM WHATSAPP
       /// =========================================
-      if (hp.isNotEmpty && password != null) {
+      if (hp.isNotEmpty && accountResult.rawPassword != null) {
         final message =
             '''
 Halo Bapak/Ibu $nama
@@ -220,8 +209,8 @@ Untuk mengetahui Informasi pembayaran iuran Anda dan
 Keadaan keuangan di Perumahan kita tercinta ini.
 
   Login:
-Email: $email
-Password: $password
+Email: ${accountResult.authEmail}
+Password: ${accountResult.rawPassword}
 
 Silakan login dan segera ganti password.
 Jika ada pertanyaan jangan sungkan untuk menghubungi kami baik di Group atau DM langsung.
@@ -384,8 +373,8 @@ Pengurus Perumahan Mulia Land Patria.
                       ? 'Password baru (opsional)'
                       : 'Password (opsional)',
                   hintText: _isEditing
-                      ? 'Kosongkan jika tidak ingin mengubah password'
-                      : 'Kosongkan untuk password random otomatis',
+                      ? 'Kosongkan jika tidak ingin mengubah password Firebase Auth'
+                      : 'Kosongkan untuk password random otomatis Firebase Auth',
                   border: const OutlineInputBorder(),
                 ),
                 validator: (v) {
