@@ -233,6 +233,25 @@ class DetailWargaPage extends StatelessWidget {
     if (docs.isEmpty) return;
     final doc = docs.first;
     final tahun = doc.data()['tahun'] ?? DateTime.now().year;
+    // 🔹 KONFIRMASI DULU
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Konfirmasi Pembayaran'),
+        content: Text('Yakin ingin bayar iuran $bulan $tahun?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Ya, Bayar'),
+          ),
+        ],
+      ),
+    ); // 🔹 Jika user batal
+    if (confirm != true) return;
     try {
       await IuranService().bayarIuranWarga(
         wargaId: wargaId,
