@@ -31,6 +31,11 @@ class _SekretarisDataPageState extends State<SekretarisDataPage> {
     'noKk',
     'keterangan',
   ];
+  static const Set<String> _managedSyncFields = {
+    'status',
+    'dihuniOleh',
+    'noHpPenghuni',
+  };
 
   bool get _canEdit {
     final role = AuthService.normalizeRole(SessionService.getRole());
@@ -77,14 +82,18 @@ class _SekretarisDataPageState extends State<SekretarisDataPage> {
               setDialogState(() => isSaving = true);
 
               final rumah = controllers['rumah']!.text.trim().toUpperCase();
+              final existingStatus = (initialData?['status'] ?? '').toString();
+              final existingDihuniOleh = (initialData?['dihuniOleh'] ?? '')
+                  .toString();
+              final existingNoHpPenghuni = (initialData?['noHpPenghuni'] ?? '')
+                  .toString();
               final data = <String, dynamic>{
                 'rumah': rumah,
                 'pemilik': controllers['pemilik']!.text.trim(),
                 'noHpPemilik': controllers['noHpPemilik']!.text.trim(),
-                'status': controllers['status']!.text
-                    .trim(), // <-- nilai dari dropdown
-                'dihuniOleh': controllers['dihuniOleh']!.text.trim(),
-                'noHpPenghuni': controllers['noHpPenghuni']!.text.trim(),
+                'status': isEditing ? existingStatus : '',
+                'dihuniOleh': isEditing ? existingDihuniOleh : '',
+                'noHpPenghuni': isEditing ? existingNoHpPenghuni : '',
                 'noKtp': controllers['noKtp']!.text.trim(),
                 'noKk': controllers['noKk']!.text.trim(),
                 'keterangan': controllers['keterangan']!.text.trim(),
@@ -135,55 +144,24 @@ class _SekretarisDataPageState extends State<SekretarisDataPage> {
                   child: SingleChildScrollView(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
-                      children: _dataHeaders.map((key) {
-                        if (key == 'status') {
-                          // ---- DROPDOWN UNTUK STATUS ----
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: DropdownButtonFormField<String>(
-                              initialValue: controllers['status']!.text.isEmpty
-                                  ? null
-                                  : controllers['status']!.text,
-                              items: ['Dihuni', 'Sewa', 'Kosong']
-                                  .map(
-                                    (e) => DropdownMenuItem(
-                                      value: e,
-                                      child: Text(e),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (value) {
-                                if (value != null) {
-                                  controllers['status']!.text = value;
-                                }
-                              },
-                              validator: (value) =>
-                                  value == null || value.isEmpty
-                                  ? 'Status wajib dipilih'
+                      children: _dataHeaders
+                          .where((key) => !_managedSyncFields.contains(key))
+                          .map((key) {
+                            return _buildField(
+                              label: _labelFor(key),
+                              controller: controllers[key]!,
+                              keyboardType: key.contains('no')
+                                  ? TextInputType.number
+                                  : TextInputType.text,
+                              validator: key == 'rumah'
+                                  ? (v) => v == null || v.trim().isEmpty
+                                        ? 'Rumah wajib diisi'
+                                        : null
                                   : null,
-                              decoration: const InputDecoration(
-                                labelText: 'Status',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          );
-                        }
-
-                        // field lainnya tetap TextFormField
-                        return _buildField(
-                          label: _labelFor(key),
-                          controller: controllers[key]!,
-                          keyboardType: key.contains('no')
-                              ? TextInputType.number
-                              : TextInputType.text,
-                          validator: key == 'rumah'
-                              ? (v) => v == null || v.trim().isEmpty
-                                    ? 'Rumah wajib diisi'
-                                    : null
-                              : null,
-                          maxLines: key == 'keterangan' ? 3 : 1,
-                        );
-                      }).toList(),
+                              maxLines: key == 'keterangan' ? 3 : 1,
+                            );
+                          })
+                          .toList(),
                     ),
                   ),
                 ),
