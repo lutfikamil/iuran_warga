@@ -35,10 +35,12 @@ android {
         productFlavors {
             create("dev") {
                 dimension = "environment"
+                applicationId = "com.lmdigital.iuranwarga"
                 applicationIdSuffix = ".dev"
             }
             create("prod") {
                 dimension = "environment"
+                applicationId = "com.lmdigital.mulialand"
             }
     }
 
