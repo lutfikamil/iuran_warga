@@ -1,6 +1,6 @@
 {
-    "name": "iuran_perumahan",
-    "short_name": "iuran_perumahan",
+    "name": "iuran_warga",
+    "short_name": "iuran_warga",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

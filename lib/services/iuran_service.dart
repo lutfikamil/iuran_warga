@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:iuran_perumahan/services/auth_service.dart';
-import 'package:iuran_perumahan/services/session_service.dart';
+import '../services/auth_service.dart';
+import '../services/session_service.dart';
 import 'package:logger/logger.dart';
 import 'settings_service.dart';
 import 'log_service.dart';

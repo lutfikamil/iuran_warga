@@ -8,8 +8,7 @@ class DashboardPage extends StatelessWidget {
 
   String get _role => AuthService.normalizeRole(SessionService.getRole());
 
-  bool get _showSekretarisMenu =>
-      _role == 'admin' || _role == 'ketua' || _role == 'sekretaris';
+  bool get _showSekretarisMenu => _role == 'admin' || _role == 'sekretaris';
 
   bool get _noShowWargaMenu =>
       _role == 'admin' ||

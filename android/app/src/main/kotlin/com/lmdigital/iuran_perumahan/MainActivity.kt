@@ -1,4 +1,4 @@
-package com.lmdigital.iuran_perumahan
+package com.lmdigital.mulialand
 
 import io.flutter.embedding.android.FlutterActivity
 

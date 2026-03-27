@@ -1,4 +1,4 @@
-name: iuran_perumahan
+name: iuran_warga
 description: "Aplikasi kelola pembayaran iuran warga."
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
