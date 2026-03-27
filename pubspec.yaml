@@ -47,7 +47,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/fonts/ # Pastikan folder assets/fonts sudah terdaftar
-    - assets/images/logo_perumahan.png
+    - assets/images/
   fonts:
     - family: NotoSans
       fonts:

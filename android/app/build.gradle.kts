@@ -29,6 +29,18 @@ android {
         versionName = flutter.versionName
         
     }
+    
+    flavorDimensions += "environment"
+    
+        productFlavors {
+            create("dev") {
+                dimension = "environment"
+                applicationIdSuffix = ".dev"
+            }
+            create("prod") {
+                dimension = "environment"
+            }
+    }
 
     buildTypes {
         release {
@@ -37,7 +49,7 @@ android {
     }
 }
 dependencies {
-    implementation(platform("com.google.firebase:firebase-bom:34.10.0"))
+    implementation(platform("com.google.firebase:firebase-bom:34.11.0"))
 }
 flutter {
     source = "../.."

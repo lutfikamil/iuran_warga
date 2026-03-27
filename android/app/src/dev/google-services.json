@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "764452059903",
+    "project_id": "mulialand-dev",
+    "storage_bucket": "mulialand-dev.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:764452059903:android:2b3b0137cfc26b07e36aca",
+        "android_client_info": {
+          "package_name": "com.lmdigital.iuranwarga"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "764452059903-uo48h0m22ha8bl1cse0223le8gv8s7nt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCkh2oRQMRRHwqpjiQKzSiZ-Xi_2xF3a1I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "764452059903-uo48h0m22ha8bl1cse0223le8gv8s7nt.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

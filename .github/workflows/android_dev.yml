@@ -20,7 +20,7 @@ jobs:
         run: flutter pub get
 
       - name: Build APK
-        run: flutter build apk -t lib/main_dev.dart --release
+        run: flutter build apk --flavor dev -t lib/main_dev.dart --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

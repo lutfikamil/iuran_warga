@@ -35,21 +35,20 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAl42xxQxkpl6_7pQyufVnILl4otyViL8w',
-    authDomain: 'mulialand-dev.firebaseapp.com',
-    projectId: 'mulialand-dev',
-    storageBucket: 'mulialand-dev.firebasestorage.app',
-    messagingSenderId: '764452059903',
-    appId: '1:764452059903:web:e34b95086f4af777e36aca',
+    apiKey: 'AIzaSyBIj75hC3hKrUz3mdwBiFLKkZiy1FfZe20',
+    appId: '1:308053015689:web:7d00abd23f721854285a58',
+    messagingSenderId: '308053015689',
+    projectId: 'mulialand',
+    authDomain: 'mulialand.firebaseapp.com',
+    storageBucket: 'mulialand.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAl42xxQxkpl6_7pQyufVnILl4otyViL8w',
-    authDomain: 'mulialand-dev.firebaseapp.com',
-    projectId: 'mulialand-dev',
-    storageBucket: 'mulialand-dev.firebasestorage.app',
-    messagingSenderId: '764452059903',
-    appId: '1:764452059903:android:2b3b0137cfc26b07e36aca',
+    apiKey: 'AIzaSyBdlZceQ1JgC779PbEeqwev7mxhqJ192GQ',
+    appId: '1:308053015689:android:85e2f3f1e9e3dbc3285a58',
+    messagingSenderId: '308053015689',
+    projectId: 'mulialand',
+    storageBucket: 'mulialand.firebasestorage.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
