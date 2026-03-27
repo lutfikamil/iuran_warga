@@ -36,7 +36,6 @@ android {
             create("dev") {
                 dimension = "environment"
                 applicationId = "com.lmdigital.iuranwarga"
-                applicationIdSuffix = ".dev"
             }
             create("prod") {
                 dimension = "environment"
