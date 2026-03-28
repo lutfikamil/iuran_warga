@@ -113,7 +113,9 @@ class _WargaPageState extends State<WargaPage> {
           child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: DefaultTextStyle(
-              style: textStyle ?? const TextStyle(),
+              style:
+                  textStyle ??
+                  TextStyle(color: Theme.of(context).colorScheme.onSurface),
               child: cell,
             ),
           ),
@@ -404,6 +406,7 @@ class _WargaPageState extends State<WargaPage> {
     List<QueryDocumentSnapshot> iuranDocs,
   ) {
     final tunggakanMap = hitungTunggakanSemuaWarga(iuranDocs);
+    final rowTextStyle = TextStyle(color: Theme.of(context).colorScheme.onSurface);
     return SingleChildScrollView(
       scrollDirection: Axis.vertical,
       child: SingleChildScrollView(
@@ -457,6 +460,7 @@ class _WargaPageState extends State<WargaPage> {
                 backgroundColor: index.isEven
                     ? Colors.grey.shade50
                     : Colors.white,
+                textStyle: rowTextStyle,
                 onTap: _isWarga
                     ? null
                     : () {
@@ -486,8 +490,11 @@ class _WargaPageState extends State<WargaPage> {
         Text("Status", textAlign: TextAlign.center),
         Text("Tunggakan", textAlign: TextAlign.center),
       ],
-      backgroundColor: Colors.blue.withAlpha(1),
-      textStyle: const TextStyle(fontWeight: FontWeight.bold),
+      backgroundColor: Colors.blue,
+      textStyle: const TextStyle(
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
     );
   }
 
