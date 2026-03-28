@@ -59,5 +59,4 @@ class DefaultFirebaseOptions {
     authDomain: 'mulialand.firebaseapp.com',
     storageBucket: 'mulialand.firebasestorage.app',
   );
-
 }

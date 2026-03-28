@@ -21,7 +21,7 @@ jobs:
 
       # 🔹 Build APK
       - name: Build APK
-        run: flutter build apk --flavor dev -t lib/main.dart --release
+        run: flutter build apk --flavor prod -t lib/main.dart --release
 
       # 🔹 Build AAB (Play Store)
       #- name: Build AAB
