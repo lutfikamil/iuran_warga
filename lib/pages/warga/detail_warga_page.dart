@@ -89,7 +89,7 @@ class DetailWargaPage extends StatelessWidget {
                   const SizedBox(height: 16),
                   _rekapCard(docs, role, context),
                   const SizedBox(height: 20),
-                  _actionButtons(context, wargaData),
+                  _actionButtons(context, wargaData, role),
                 ],
               ),
             );
@@ -272,7 +272,15 @@ class DetailWargaPage extends StatelessWidget {
     }
   }
 
-  Widget _actionButtons(BuildContext context, Map<String, dynamic> wargaData) {
+  Widget _actionButtons(
+    BuildContext context,
+    Map<String, dynamic> wargaData,
+    String role,
+  ) {
+    if (role == 'warga') {
+      return const SizedBox.shrink();
+    }
+
     return Wrap(
       alignment: WrapAlignment.center,
       spacing: 12,
