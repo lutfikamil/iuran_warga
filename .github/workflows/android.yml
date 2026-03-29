@@ -31,10 +31,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: apk-release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/app-prod-release.apk
 
       #- name: Upload AAB
       #  uses: actions/upload-artifact@v4
       #  with:
       #    name: aab-release
-      #    path: build/app/outputs/bundle/release/app-release.aab
+      #    path: build/app/outputs/bundle/release/app-prod-release.aab
