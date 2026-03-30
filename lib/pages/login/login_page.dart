@@ -183,7 +183,7 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 10),
                   const Text(
-                    "Login Sistem Iuran\nMULIA LAND",
+                    "Login Sistem Iuran\nMULIA LAND PATRIA",
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 22),
                   ),

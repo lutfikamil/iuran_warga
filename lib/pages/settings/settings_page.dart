@@ -97,9 +97,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Setting berhasil disimpan')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Setting berhasil disimpan')));
   }
 
   Widget buildCard({required String title, required Widget child}) {
@@ -192,7 +192,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   const Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Isi nomor device/sender jika gateway Anda membutuhkannya. Token tidak ditampilkan di log aktivitas.',
+                      'Isi nomor WA/sender jika gateway Anda membutuhkannya. Token tidak ditampilkan di log aktivitas.',
                       style: TextStyle(color: Colors.grey),
                     ),
                   ),

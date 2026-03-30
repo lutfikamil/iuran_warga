@@ -187,12 +187,12 @@ class DetailWargaPage extends StatelessWidget {
                   if (canPay) const DataColumn(label: Text('Aksi')),
                 ],
                 rows: bulanUtil.bulanList.map((bulan) {
-                  final unpaid = docs
-                      .where(
-                        (d) =>
-                            d.data()['bulan'] == bulan &&
-                            d.data()['status'] != 'lunas',
-                      )
+                  final bulanDocs = docs
+                      .where((d) => d.data()['bulan'] == bulan)
+                      .toList();
+
+                  final unpaid = bulanDocs
+                      .where((d) => d.data()['status'] != 'lunas')
                       .toList();
                   return DataRow(
                     cells: [
@@ -203,7 +203,12 @@ class DetailWargaPage extends StatelessWidget {
                       }),
                       if (canPay)
                         DataCell(
-                          unpaid.isEmpty
+                          bulanDocs.isEmpty
+                              ? const Text(
+                                  'Belum',
+                                  style: TextStyle(color: Colors.grey),
+                                )
+                              : unpaid.isEmpty
                               ? const Text(
                                   'Lunas',
                                   style: TextStyle(color: Colors.green),
