@@ -122,9 +122,9 @@ class _LogsPageState extends State<LogsPage> {
                       0: FixedColumnWidth(50),
                       1: FixedColumnWidth(170),
                       2: FixedColumnWidth(100),
-                      3: FixedColumnWidth(140),
+                      3: FixedColumnWidth(150),
                       4: FixedColumnWidth(140),
-                      5: FixedColumnWidth(420),
+                      5: FixedColumnWidth(450),
                     },
                     children: [
                       _buildHeaderRow(context),
