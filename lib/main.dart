@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
 
       initialRoute: isLogin ? AppRoutes.dashboard : AppRoutes.login,
 
-      routes: AppRoutes.routes,
+      routes: AppRoutes.prodRoutes,
     );
   }
 }

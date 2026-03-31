@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../pages/laporan/laporan_page.dart';
 import '../pages/login/login_page.dart';
@@ -64,8 +63,18 @@ class AppRoutes {
     );
   }
 
-  static Map<String, WidgetBuilder> routes = {
-    login: (_) => kDebugMode ? const LoginDevPage() : const LoginPage(),
+  static Map<String, WidgetBuilder> get prodRoutes => _buildRoutes(
+    loginBuilder: (_) => const LoginPage(),
+  );
+
+  static Map<String, WidgetBuilder> get devRoutes => _buildRoutes(
+    loginBuilder: (_) => const LoginDevPage(),
+  );
+
+  static Map<String, WidgetBuilder> _buildRoutes({
+    required WidgetBuilder loginBuilder,
+  }) => {
+    login: loginBuilder,
     dashboard: (_) =>
         _buildGuardedRoute(page: const DashboardPage(), allowedRoles: []),
 
